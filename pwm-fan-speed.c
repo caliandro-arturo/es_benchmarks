@@ -2,10 +2,10 @@
  * PWM fan speed controller
  *
  * This program is a simulation of the effect of a fan, if it was applied
- * on the system for which a energy production timeserie is given.
+ * on the system for which a energy production time series is given.
  *
  * Input:
- * - path to a file containing the energy production timeserie, measured
+ * - path to a file containing the energy production time series, measured
  *   at intervals of time of length DT (defined in code), in Joule;
  * - a threshold temperature in degrees Celsius, used to compute the error
  *   for the fan PID controller;
