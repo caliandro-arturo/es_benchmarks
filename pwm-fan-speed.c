@@ -26,7 +26,8 @@
  * - the system consists in a vertical aluminium square of area
  *   10x10 cm^2 and a small volume;
  * - the ambient temperature is constant and equal to 25.0 °C;
- * - the fan is a classic round fan with a diameter of 12cm.
+ * - the fan is a classic round fan with a diameter of 12cm, and it is
+ *   set in front of the aluminium surface, at a distance of 10cm.
  *
  * @author Arturo Caliandro <arturo.caliandro AT mail.polimi DOT it>
  *
@@ -57,7 +58,8 @@ float Kd;
 #define AIR_Pr 0.71                   // Air Prandtl number
 
 // Fan constants
-#define FAN_AREA 0.0113 // [m^2] circular area of a 12x12cm fan
+#define FAN_AREA 0.0113  // [m^2] circular area of a 12x12cm fan
+#define FAN_DISTANCE 0.1 // [m] distance of the fan from the surface
 
 // General constants
 #define g 9.81    // [m/s^2]
@@ -81,8 +83,10 @@ typedef struct {
 int get_next_input_value(double *value, FILE *fp);
 double evaluate_temperature_increment(double heat_diff);
 double evaluate_natural_cooling(double temp);
-double evaluate_fan_cooling(fan_t *fan, status_t *status, double th);
+double evaluate_fan_cooling(fan_t fan, status_t status);
 double evaluate_new_dc(status_t *status, double th);
+double grashof(double temp);
+double reynolds(fan_t fan, double temp);
 
 int main(int argc, char *argv[]) {
     // Parsing the input
@@ -134,21 +138,28 @@ int main(int argc, char *argv[]) {
         fclose(input);
         exit(EXIT_FAILURE);
     }
-    double temp_delta, natural_cooling;
+    double temp_delta, cooling, richardson;
     FILE *output = fopen("output.csv", "w");
-    int count = 0;
+    int count = 1;
     while (ret_code == 0) {
         // Temperature increment
         temp_delta = evaluate_temperature_increment(heat_diff);
         status.current_temp += temp_delta;
         status.expected_temp += temp_delta;
         // Natural convection
-        natural_cooling = evaluate_natural_cooling(status.current_temp);
-        status.current_temp -= evaluate_temperature_increment(natural_cooling);
+        cooling = evaluate_natural_cooling(status.current_temp);
+        status.current_temp -= evaluate_temperature_increment(cooling);
         // Forced convection via fan
-        natural_cooling = evaluate_natural_cooling(status.expected_temp);
-        status.expected_temp -= evaluate_temperature_increment(
-            evaluate_fan_cooling(&fan, &status, temp_th) + natural_cooling);
+        richardson = grashof(status.expected_temp) /
+                     pow(reynolds(fan, status.expected_temp), 2);
+        if (richardson > 16) {
+            // Forced convection is negligible
+            cooling = evaluate_natural_cooling(status.expected_temp);
+        } else {
+            // Consider forced convection only
+            cooling = evaluate_fan_cooling(fan, status);
+        }
+        status.expected_temp -= evaluate_temperature_increment(cooling);
         fan.DC = evaluate_new_dc(&status, temp_th);
         fprintf(output, "%le, %le, %.3f\n", status.current_temp,
                 status.expected_temp, fan.DC);
@@ -165,7 +176,7 @@ int main(int argc, char *argv[]) {
 }
 
 /**
- * @brief Reads the next value from the input file.
+ * @brief Read the next value from the input file.
  *
  * @param value the read value, casted to double
  * @param fd the file descriptor
@@ -187,7 +198,7 @@ int get_next_input_value(double *value, FILE *fp) {
 }
 
 /**
- * @brief compute the new duty-cycle value for the fan
+ * @brief Compute the new duty-cycle value for the fan
  *
  * @param status the status of the system
  * @param th the threshold temperature
@@ -210,7 +221,7 @@ double evaluate_new_dc(status_t *status, double th) {
 }
 
 /**
- * @brief compute the temperature increment
+ * @brief Compute the temperature increment
  *
  * @param heat_diff the variation of heat
  * @return double: the temperature delta
@@ -220,7 +231,7 @@ double evaluate_temperature_increment(double heat_diff) {
 }
 
 /**
- * @brief compute the variation of heat due to natural convection
+ * @brief Compute the variation of heat due to natural convection
  *
  * @param temp the current temperature
  * @return double: the heat variation
@@ -248,18 +259,27 @@ double evaluate_natural_cooling(double temp) {
 }
 
 /**
+ * @brief Compute the Grashof number
+ *
+ * @param temp the system's temperature
+ * @return double: the Grashof number
+ */
+double grashof(double temp) {
+    double t_film = (temp + AMBIENT_TEMP) / 2 + K0;
+    return ((g * (1 / t_film) * (temp - AMBIENT_TEMP) * pow(CHARACT_LEN, 3)) /
+            pow(AIR_VISCOSITY * pow(t_film, 0.7355), 2));
+}
+
+/**
  * @brief compute the variation of heat due to the cooling action of the fan
  *
  * @param fan the fan instance
  * @param status the status of the system
- * @param th the threshold temperature
  * @return double: the heat variation
  */
-double evaluate_fan_cooling(fan_t *fan, status_t *status, double th) {
-    double t_film = (status->expected_temp + AMBIENT_TEMP) / 2 + K0;
+double evaluate_fan_cooling(fan_t fan, status_t status) {
     // Reynolds number for forced convection
-    double Re = (AIR_DENSITY * (fan->speed * fan->DC) * CHARACT_LEN) /
-                (AIR_VISCOSITY * pow(t_film, 0.7355));
+    double Re = reynolds(fan, status.expected_temp);
     double C, m, n;
     // Assuming that the laminar-turbulent threshold is 3000
     if (Re > 3000.0) {
@@ -270,6 +290,19 @@ double evaluate_fan_cooling(fan_t *fan, status_t *status, double th) {
         C = 0.664, m = 0.5, n = 1.0 / 3;
     }
     double Nu = C * pow(Re, m) * pow(AIR_Pr, n);
-    double h = Nu * AIR_THERM_COND / CHARACT_LEN;
-    return (h * SURFACE_AREA * (status->expected_temp - AMBIENT_TEMP));
+    double h = Nu * AIR_THERM_COND / FAN_DISTANCE;
+    return (h * SURFACE_AREA * (status.expected_temp - AMBIENT_TEMP));
+}
+
+/**
+ * @brief Compute the Reynolds number
+ *
+ * @param fan the fan parameters
+ * @param temp the surface temperature
+ * @return double: the Reynolds number
+ */
+double reynolds(fan_t fan, double temp) {
+    double t_film = (temp + AMBIENT_TEMP) / 2 + K0;
+    return (AIR_DENSITY * (fan.speed * fan.DC) * FAN_DISTANCE) /
+           (AIR_VISCOSITY * pow(t_film, 0.7355));
 }
