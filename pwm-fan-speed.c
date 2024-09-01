@@ -195,8 +195,10 @@ int get_next_input_value(double *value, FILE *fp) {
  */
 double evaluate_new_dc(status_t *status, double th) {
     double err = status->expected_temp - th;
-    double derivative = (err - status->__prev_err) / DT;
-    status->__integral += err * DT;
+    // Clipping to values above 0 since temperatures below the threshold
+    // are ok
+    double derivative = fmax((err - status->__prev_err) / DT, 0);
+    status->__integral = fmax(status->__integral + err * DT, 0);
     status->__prev_err = err;
     double dc =
         (Kp * err + Ki * (status->__integral) + Kd * derivative) / 100.0;
