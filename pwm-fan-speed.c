@@ -131,6 +131,7 @@ int main(int argc, char *argv[]) {
     int ret_code = get_next_input_value(&heat_diff, input);
     if (ret_code != 0) {
         puts("Error at input line 1: invalid data.");
+        fclose(input);
         exit(EXIT_FAILURE);
     }
     double temp_delta, natural_cooling;
@@ -154,12 +155,12 @@ int main(int argc, char *argv[]) {
         ret_code = get_next_input_value(&heat_diff, input);
         count++;
     }
+    fclose(input);
+    fclose(output);
     if (ret_code != EOF) {
         printf("Error at input line %d: invalid data.\n", count);
         exit(EXIT_FAILURE);
     }
-    fclose(input);
-    fclose(output);
     return EXIT_SUCCESS;
 }
 
