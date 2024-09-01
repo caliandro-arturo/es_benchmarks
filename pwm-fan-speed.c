@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
     double heat_diff;
     int ret_code = get_next_input_value(&heat_diff, input);
     if (ret_code != 0) {
-        puts("Error: invalid value.");
+        puts("Error at input line 1: invalid data.");
         exit(EXIT_FAILURE);
     }
     double temp_delta, natural_cooling;
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
         count++;
     }
     if (ret_code != EOF) {
-        printf("Error at line %d: invalid data.", count);
+        printf("Error at input line %d: invalid data.\n", count);
         exit(EXIT_FAILURE);
     }
     fclose(input);
@@ -175,13 +175,12 @@ int main(int argc, char *argv[]) {
 int get_next_input_value(double *value, FILE *fp) {
     char *line = NULL;
     size_t len;
-    int status;
-    if (getline(&line, &len, fp) == -1)
+    int status = 0;
+    if (getline(&line, &len, fp) == EOF) {
         status = EOF;
-    else if (sscanf(line, "%lf", value) != 1)
+    } else if (sscanf(line, "%lf", value) != 1) {
         status = 1;
-    else
-        status = 0;
+    }
     free(line);
     return status;
 }
