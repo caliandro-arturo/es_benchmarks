@@ -82,6 +82,7 @@ int get_next_input_value(double *value, FILE *fp);
 double evaluate_temperature_increment(double heat_diff);
 double evaluate_natural_cooling(double temp);
 double evaluate_fan_cooling(fan_t *fan, status_t *status, double th);
+double evaluate_new_dc(status_t *status, double th);
 
 int main(int argc, char *argv[]) {
     // Parsing the input
@@ -147,6 +148,7 @@ int main(int argc, char *argv[]) {
         natural_cooling = evaluate_natural_cooling(status.expected_temp);
         status.expected_temp -= evaluate_temperature_increment(
             evaluate_fan_cooling(&fan, &status, temp_th) + natural_cooling);
+        fan.DC = evaluate_new_dc(&status, temp_th);
         fprintf(output, "%le, %le, %.3f\n", status.current_temp,
                 status.expected_temp, fan.DC);
         ret_code = get_next_input_value(&heat_diff, input);
@@ -191,7 +193,7 @@ int get_next_input_value(double *value, FILE *fp) {
  * @param th the threshold temperature
  * @return double: a value in the interval [0.0, 1.0]
  */
-double get_new_dc(status_t *status, double th) {
+double evaluate_new_dc(status_t *status, double th) {
     double err = status->expected_temp - th;
     double derivative = (err - status->__prev_err) / DT;
     status->__integral += err * DT;
@@ -267,6 +269,5 @@ double evaluate_fan_cooling(fan_t *fan, status_t *status, double th) {
     }
     double Nu = C * pow(Re, m) * pow(AIR_Pr, n);
     double h = Nu * AIR_THERM_COND / CHARACT_LEN;
-    fan->DC = get_new_dc(status, th);
     return (h * SURFACE_AREA * (status->expected_temp - AMBIENT_TEMP));
 }
