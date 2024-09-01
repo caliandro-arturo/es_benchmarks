@@ -2,19 +2,38 @@
  * PWM fan speed controller
  *
  * This program is a simulation of the effect of a fan, if it was applied
- * on the system for which a heat draw is given.
+ * on the system for which a energy production timeserie is given.
  *
- * Some assumptions are made on the system to simplify the model:
- * - the system is approximated to a vertical aluminium square of area
- *   10x10 cm^2 and negligible volume;
+ * Input:
+ * - path to a file containing the energy production timeserie, measured
+ *   at intervals of time of length DT (defined in code), in Joule;
+ * - a threshold temperature in degrees Celsius, used to compute the error
+ *   for the fan PID controller;
+ * - the maximum airflow of the fan in cubic meters per second;
+ * - the three parameters of the PID controller: Kp, Ki and Kd, defining
+ *   respectively the proportional, integral and derivative contribute.
+ *
+ * Output:
+ * - a file, called "output.csv", containing the same number of rows as
+ *   the input file, and three columns, respectively:
+ *   - the temperature of the aluminium surface, subject to natural
+ *     convection only;
+ *   - the temperature of the aluminium surface, subject to both natural
+ *     and forced convection (due to the fan action);
+ *   - the duty-cycle used to control the fan.
+ *
+ * Some assumptions have been made on the system to simplify the model:
+ * - the system consists in a vertical aluminium square of area
+ *   10x10 cm^2 and a small volume;
  * - the ambient temperature is constant and equal to 25.0 °C;
- * - the fan is a classic 12x12 cm round fan.
+ * - the fan is a classic round fan with a diameter of 12cm.
  *
  * @author Arturo Caliandro <arturo.caliandro AT mail.polimi DOT it>
  *
  */
 
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -23,7 +42,7 @@ float Kp;
 float Ki;
 float Kd;
 
-// an aluminium square
+// An aluminium square
 #define SURFACE_AREA 0.01  // [m^2]
 #define CHARACT_LEN 0.1    // [m] (length of the surface)
 #define ALUMINIUM_CP 0.897 // [J/(Kg*K)]
@@ -35,30 +54,28 @@ float Kd;
 #define AIR_VISCOSITY 2.791E-7        // x T^0.7355 [Pa*s]
 #define AIR_THERMAL_DIFF_COEFF 1.9E-5 // [m^2/s]
 #define AIR_DENSITY 1.1839            // [kg/m^3] at 25°C
-#define AIR_Pr 0.71
+#define AIR_Pr 0.71                   // Air Prandtl number
 
+// Fan constants
+#define FAN_AREA 0.0113 // [m^2] circular area of a 12x12cm fan
+
+// General constants
 #define g 9.81    // [m/s^2]
 #define K0 273.15 // [K] Kelvin absolute zero
 #define DT 1      // [s]
 
-#define FAN_AREA 0.0113 // [m^2] circular area of a 12x12cm fan
-
-typedef enum {
-    false,
-    true,
-} bool;
-
+// Fan characteristics
 typedef struct {
-    const double speed; // speed of moved air
+    const double speed; // speed of blown air
     float DC;           // duty-cycle
 } fan_t;
 
+// Status of the system, including the parameters for the PID controller
 typedef struct {
-    double current_temp;
-    double expected_temp;
-    double __integral;
-    double __prev_err;
-    double time;
+    double current_temp;  // Temperature of the naturally cooled system
+    double expected_temp; // Temperature of the system if cooled by the fan
+    double __integral;    // Integral error accumulation
+    double __prev_err;    // Previous error
 } status_t;
 
 int get_next_input_value(double *value, FILE *fp);
@@ -67,6 +84,7 @@ double evaluate_natural_cooling(double temp);
 double evaluate_fan_cooling(fan_t *fan, status_t *status, double th);
 
 int main(int argc, char *argv[]) {
+    // Parsing the input
     if (argc != 7) {
         printf("Usage: %s temps_file threshold_temp fan_airflow_m^3/sec Kp Ki "
                "Kd\n",
@@ -92,18 +110,31 @@ int main(int argc, char *argv[]) {
     }
     fan_t fan = {airflow / FAN_AREA, 0.0};
     Kp = strtof(argv[4], &endptr);
+    if (Kp == 0 && endptr == argv[4]) {
+        puts("Error: the Kp parameter must be a float number.");
+        exit(EXIT_FAILURE);
+    }
     Ki = strtof(argv[5], &endptr);
+    if (Ki == 0 && endptr == argv[5]) {
+        puts("Error: the Ki parameter must be a float number.");
+        exit(EXIT_FAILURE);
+    }
     Kd = strtof(argv[6], &endptr);
-    status_t status = {AMBIENT_TEMP, AMBIENT_TEMP, 0, 0, 0};
+    if (Kp == 0 && endptr == argv[6]) {
+        puts("Error: the Kd parameter must be a float number.");
+        exit(EXIT_FAILURE);
+    }
+    // Assuming that the system starts at ambient temperature
+    status_t status = {AMBIENT_TEMP, AMBIENT_TEMP, 0, 0};
     double heat_diff;
     int ret_code = get_next_input_value(&heat_diff, input);
     if (ret_code != 0) {
-        puts("Error: invalid file format.");
+        puts("Error: invalid value.");
         exit(EXIT_FAILURE);
     }
-    int count = 1;
     double temp_delta, natural_cooling;
     FILE *output = fopen("output.csv", "w");
+    int count = 0;
     while (ret_code == 0) {
         // Temperature increment
         temp_delta = evaluate_temperature_increment(heat_diff);
@@ -120,6 +151,10 @@ int main(int argc, char *argv[]) {
                 status.expected_temp, fan.DC);
         ret_code = get_next_input_value(&heat_diff, input);
         count++;
+    }
+    if (ret_code != EOF) {
+        printf("Error at line %d: invalid data.", count);
+        exit(EXIT_FAILURE);
     }
     fclose(input);
     fclose(output);
@@ -152,7 +187,9 @@ int get_next_input_value(double *value, FILE *fp) {
 /**
  * @brief compute the new duty-cycle value for the fan
  *
- * @return a value in the interval [0.0, 1.0]
+ * @param status the status of the system
+ * @param th the threshold temperature
+ * @return double: a value in the interval [0.0, 1.0]
  */
 double get_new_dc(status_t *status, double th) {
     double err = status->expected_temp - th;
@@ -168,12 +205,25 @@ double get_new_dc(status_t *status, double th) {
     return dc;
 }
 
+/**
+ * @brief compute the temperature increment
+ *
+ * @param heat_diff the variation of heat
+ * @return double: the temperature delta
+ */
 double evaluate_temperature_increment(double heat_diff) {
     return (heat_diff / ALUMINIUM_CP) * DT;
 }
 
+/**
+ * @brief compute the variation of heat due to natural convection
+ *
+ * @param temp the current temperature
+ * @return double: the heat variation
+ */
 double evaluate_natural_cooling(double temp) {
     double t_film = (temp + AMBIENT_TEMP) / 2 + K0;
+    // Rayleigh number for natural convection
     double Ra = (g * (1 / t_film)) /
                 (AIR_VISCOSITY * pow(t_film, 0.7355) * AIR_THERMAL_DIFF_COEFF) *
                 (temp - AMBIENT_TEMP) * pow(CHARACT_LEN, 3);
@@ -193,8 +243,17 @@ double evaluate_natural_cooling(double temp) {
     return (h * SURFACE_AREA * (temp - AMBIENT_TEMP));
 }
 
+/**
+ * @brief compute the variation of heat due to the cooling action of the fan
+ *
+ * @param fan the fan instance
+ * @param status the status of the system
+ * @param th the threshold temperature
+ * @return double: the heat variation
+ */
 double evaluate_fan_cooling(fan_t *fan, status_t *status, double th) {
     double t_film = (status->expected_temp + AMBIENT_TEMP) / 2 + K0;
+    // Reynolds number for forced convection
     double Re = (AIR_DENSITY * (fan->speed * fan->DC) * CHARACT_LEN) /
                 (AIR_VISCOSITY * pow(t_film, 0.7355));
     double C, m, n;
