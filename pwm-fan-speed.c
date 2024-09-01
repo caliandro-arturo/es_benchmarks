@@ -226,7 +226,7 @@ double evaluate_natural_cooling(double temp) {
     // Rayleigh number for natural convection
     double Ra = (g * (1 / t_film)) /
                 (AIR_VISCOSITY * pow(t_film, 0.7355) * AIR_THERMAL_DIFF_COEFF) *
-                (temp - AMBIENT_TEMP) * pow(CHARACT_LEN, 3);
+                fabs(temp - AMBIENT_TEMP) * pow(CHARACT_LEN, 3);
     double h;
     if (Ra > 1E9) {
         // Turbulent
