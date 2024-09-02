@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +9,7 @@
 
 void abort_program(FILE *input, FILE *output);
 int count_lines(FILE *input);
-double *get_values(FILE *input, int *n);
+double *get_values(FILE *input, int *n, double *min, double *max);
 
 int main(int argc, char *argv[]) {
     if (argc - 1 != 3) {
@@ -42,11 +43,28 @@ int main(int argc, char *argv[]) {
         abort_program(input, NULL);
     }
     int x_len;
-    double *x = get_values(input, &x_len);
+    double min, max;
+    double *x = get_values(input, &x_len, &min, &max);
     // Check if size meets conditions
+    if (x_len > width) {
+        printf("Input too big for the picture: truncating to the first %d "
+               "values\n",
+               width);
+        x_len = width;
+    }
 
     // Find maximum and minimum of the signal
+    // How many pixels between one input and the next one
+    int x_factor = width / x_len; // >= 1
 
+    int y_factor;
+    if (min == max) {
+        // Constant value, to be plot in the half of the image as a line
+        min -= height / 2.0;
+        y_factor = 1;
+    } else {
+        y_factor = height / (max - min);
+    }
     // For each couple of point of the input draw a line (using e.g. Bresenham)
 
     // Write image on a file
@@ -100,9 +118,11 @@ int count_lines(FILE *input) {
  * @param input the input file
  * @param n the address of a variable in which the size of the array will
  *          be stored
+ * @param min the minimum found input value
+ * @param max the maximum found input value
  * @return double *: the array with the input values, to be freed by the caller.
  */
-double *get_values(FILE *input, int *n) {
+double *get_values(FILE *input, int *n, double *min, double *max) {
     *n = count_lines(input);
     if (*n == -1) {
         perror("count_lines");
@@ -111,12 +131,20 @@ double *get_values(FILE *input, int *n) {
     double *values = malloc(*n * sizeof(double));
     char line[26];
     char *endptr;
+    *min = INFINITY;
+    *max = -INFINITY;
     for (int i = 0; i < *n; ++i) {
         values[i] = strtod(fgets(line, sizeof(line), input), &endptr);
         if (values[i] == 0 && endptr == line) {
             fprintf(stderr, "Error at input line %d: invalid data.\n", i);
             free(values);
             abort_program(input, NULL);
+        }
+        if (values[i] < *min) {
+            *min = values[i];
+        }
+        if (values[i] > *max) {
+            *max = values[i];
         }
     }
     return values;
