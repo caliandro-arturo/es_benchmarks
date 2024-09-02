@@ -185,15 +185,14 @@ int main(int argc, char *argv[]) {
  *         reached, 1 if there was an error during the conversion.
  */
 int get_next_input_value(double *value, FILE *fp) {
-    char *line = NULL;
+    static char line[26];
     size_t len;
     int status = 0;
-    if (getline(&line, &len, fp) == EOF) {
+    if (fgets(line, sizeof(line), fp) == NULL) {
         status = EOF;
     } else if (sscanf(line, "%lf", value) != 1) {
         status = 1;
     }
-    free(line);
     return status;
 }
 
