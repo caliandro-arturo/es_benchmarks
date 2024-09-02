@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug pwm-fan-speed",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/pwm-fan-speed.o",
+            "args": [
+                "${workspaceFolder}/input_files/pwm-fan-speed/heat1.csv",
+                // Temperature threshold
+                "50",
+                // Airflow in m^3/s
+                "0.07",
+                // Kp
+                "1",
+                // Ki
+                "1",
+                // Kd
+                "0"
+            ],
+            "stopAtEntry": false,
+            "preLaunchTask": "Build debug pwm-fan-speed",
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
