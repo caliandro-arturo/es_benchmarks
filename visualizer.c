@@ -7,6 +7,8 @@
 #define MAX_HEIGHT 1080
 
 void abort_program(FILE *input, FILE *output);
+int count_lines(FILE *input);
+double *get_values(FILE *input, int *n);
 
 int main(int argc, char *argv[]) {
     if (argc - 1 != 3) {
@@ -39,6 +41,8 @@ int main(int argc, char *argv[]) {
                 MAX_HEIGHT);
         abort_program(input, NULL);
     }
+    int x_len;
+    double *x = get_values(input, &x_len);
     // Check if size meets conditions
 
     // Find maximum and minimum of the signal
@@ -49,9 +53,16 @@ int main(int argc, char *argv[]) {
 
     // Close every file
     fclose(input);
+    free(x);
     return EXIT_SUCCESS;
 }
 
+/**
+ * @brief Close the open files, then exit with failure.
+ *
+ * @param input the input file
+ * @param output the output file
+ */
 void abort_program(FILE *input, FILE *output) {
     if (input != NULL) {
         fclose(input);
@@ -60,4 +71,53 @@ void abort_program(FILE *input, FILE *output) {
         fclose(output);
     }
     exit(EXIT_FAILURE);
+}
+
+/**
+ * @brief Count the lines of the input file.
+ *
+ * @param input the input file
+ * @return int: the number of lines, or -1 if there was an error
+ */
+int count_lines(FILE *input) {
+    int count = 0;
+    char line[26];
+    while (fgets(line, sizeof(line), input) != NULL) {
+        count++;
+    }
+    if (ferror(input) != 0) {
+        return -1;
+    }
+    // Then it is EOF
+    rewind(input);
+    return count;
+}
+
+/**
+ * @brief Read the input file and put the values in a heap-allocated array.
+ *        If there is an error in reading the file, the program is aborted.
+ *
+ * @param input the input file
+ * @param n the address of a variable in which the size of the array will
+ *          be stored
+ * @return double *: the array with the input values, to be freed by the caller.
+ */
+double *get_values(FILE *input, int *n) {
+    *n = count_lines(input);
+    if (*n == -1) {
+        perror("count_lines");
+        abort_program(input, NULL);
+    }
+    double *values = malloc(*n * sizeof(double));
+    char line[26];
+    char *endptr;
+    for (int i = 0; i < *n; ++i) {
+        values[i] = strtod(fgets(line, sizeof(line), input), &endptr);
+        if (values[i] == 0 && endptr == line) {
+            fprintf(stderr, "Error at input line %d: invalid data.\n", i);
+            free(values);
+            abort_program(input, NULL);
+        }
+    }
+    return values;
 }
