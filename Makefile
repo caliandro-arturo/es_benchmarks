@@ -1,9 +1,12 @@
-CFLAGS = -std=c11
+CCFLAGS = -std=c11
 LIBS = -lm
 objects = pwm-fan-speed.o
 
+debug: CCFLAGS += -ggdb3
+debug: $(objects)
+
 $(objects): %.o: %.c
-	gcc -ggdb3 $^ -o $@ $(LIBS)
+	$(CC) $(CCFLAGS) $^ -o $@ $(LIBS)
 
 clean:
 	rm -f *.o
