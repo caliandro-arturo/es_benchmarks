@@ -1,8 +1,28 @@
+/**
+ * @file visualizer.c
+ * @author Arturo Caliandro (arturo.caliandro AT mail.polimi.it)
+ * @brief Time series visualizer.
+ * Input:
+ * - path to a file containing a time series;
+ * - width of the output image;
+ * - height of the output image.
+ * Output:
+ * - the image representing the signal, in .pbm (Portable BitMap) format.
+ */
+
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct {
+    int width;       // The width of the image
+    int height;      // The height of the image
+    int x_factor;    // The scaling factor for the x axis
+    double y_factor; // The scaling factor for the y axis
+    double min;      // The minimum value found so far
+} image_data;
 
 #define MAX_WIDTH 1920
 #define MAX_HEIGHT 1080
@@ -10,6 +30,8 @@
 void abort_program(FILE *input, FILE *output);
 int count_lines(FILE *input);
 double *get_values(FILE *input, int *n, double *min, double *max);
+void draw_line(image_data im_data, char image[im_data.height][im_data.width],
+               int x_0, double y_0, double y_1);
 
 int main(int argc, char *argv[]) {
     if (argc - 1 != 3) {
@@ -42,36 +64,65 @@ int main(int argc, char *argv[]) {
                 MAX_HEIGHT);
         abort_program(input, NULL);
     }
-    int x_len;
+    int x_max;
     double min, max;
-    double *x = get_values(input, &x_len, &min, &max);
-    // Check if size meets conditions
-    if (x_len > width) {
+    double *y = get_values(input, &x_max, &min, &max);
+    // From now on, errors are not due to input
+    image_data im_data = {.width = width, .height = height, .min = min};
+    char image[im_data.height][im_data.width];
+    for (int i = 0; i < im_data.height; ++i) {
+        for (int j = 0; j < im_data.width; ++j) {
+            image[i][j] = '0';
+        }
+    }
+    // Check if time series fits horizontally
+    if (x_max > im_data.width) {
         printf("Input too big for the picture: truncating to the first %d "
                "values\n",
-               width);
-        x_len = width;
+               im_data.width);
+        x_max = im_data.width;
+        // Find the maximum and the minimum, again
+        min = INFINITY;
+        max = -INFINITY;
+        for (int i = 0; i < x_max; ++i) {
+            if (y[i] > max) {
+                max = y[i];
+            }
+            if (y[i] < min) {
+                min = y[i];
+            }
+        }
+        im_data.min = min;
     }
-
-    // Find maximum and minimum of the signal
-    // How many pixels between one input and the next one
-    int x_factor = width / x_len; // >= 1
-
-    int y_factor;
-    if (min == max) {
+    // Scale maximum and minimum according to size of the image
+    im_data.x_factor = width / x_max; // >= 1
+    if (im_data.min == max) {
         // Constant value, to be plot in the half of the image as a line
-        min -= height / 2.0;
-        y_factor = 1;
+        im_data.min -= (height - 1) / 2.0;
+        im_data.y_factor = 1;
     } else {
-        y_factor = height / (max - min);
+        // To scale a y value, the used formula is:
+        // y_scaled = (height-1)*(y-min)/(max - min)
+        im_data.y_factor = (im_data.height - 1) / (max - im_data.min);
     }
-    // For each couple of point of the input draw a line (using e.g. Bresenham)
-
+    // For each couple of point of the input draw a line
+    for (int i = 1; i < x_max; ++i) {
+        draw_line(im_data, image, i, y[i - 1], y[i]);
+    }
     // Write image on a file
-
+    FILE *output = fopen("output.pbm", "w");
+    fputs("P1\n", output);
+    fprintf(output, "%d %d\n", im_data.width, im_data.height);
+    for (int i = 0; i < im_data.height; ++i) {
+        for (int j = 0; j < im_data.width; ++j) {
+            fputc(image[i][j], output);
+        }
+        fputc('\n', output);
+    }
     // Close every file
     fclose(input);
-    free(x);
+    fclose(output);
+    free(y);
     return EXIT_SUCCESS;
 }
 
@@ -113,7 +164,7 @@ int count_lines(FILE *input) {
 
 /**
  * @brief Read the input file and put the values in a heap-allocated array.
- *        If there is an error in reading the file, the program is aborted.
+ *        If there is an error while reading the file, the program is aborted.
  *
  * @param input the input file
  * @param n the address of a variable in which the size of the array will
@@ -148,4 +199,42 @@ double *get_values(FILE *input, int *n, double *min, double *max) {
         }
     }
     return values;
+}
+
+/**
+ * @brief Draw a line, using the Bresenham's Line Drawing algorithm.
+ *
+ * @param im_data the image metadata
+ * @param image the image representation
+ * @param x_0 the final x value (used to find the start)
+ * @param y_0 the first y value
+ * @param y_1 the second y value
+ */
+void draw_line(image_data im_data, char image[im_data.height][im_data.width],
+               int x_1, double y_0, double y_1) {
+    x_1 *= im_data.x_factor;
+    int x = x_1 - im_data.x_factor;
+    int dx = im_data.x_factor;
+    int sign_x = 1;
+    int y = im_data.height - (im_data.y_factor * (y_0 - im_data.min)) - 1;
+    int y1 = im_data.height - (im_data.y_factor * (y_1 - im_data.min)) - 1;
+    int dy = -abs(y1 - y);
+    int sign_y = y < y1 ? 1 : -1;
+    int err = dx + dy;
+    int e2;
+    while (1) {
+        image[y][x] = '1';
+        if (x == x_1 && y == y1) {
+            break;
+        }
+        e2 = 2 * err;
+        if (e2 >= dy) {
+            err += dy;
+            x += sign_x;
+        }
+        if (e2 <= dx) {
+            err += dx;
+            y += sign_y;
+        }
+    }
 }
