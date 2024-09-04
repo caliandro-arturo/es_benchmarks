@@ -3,8 +3,8 @@
 #include <math.h>
 #include <limits.h>
 
-#define WIDTH 50  // Larghezza della mappa (aggiornata dinamicamente)
-#define HEIGHT 50 // Altezza della mappa (aggiornata dinamicamente)
+int WIDTH = 50;  // Larghezza della mappa (aggiornata dinamicamente)
+int HEIGHT = 50; // Altezza della mappa (aggiornata dinamicamente)
 
 typedef struct
 {
@@ -18,13 +18,27 @@ typedef struct
     Point parent;
 } Node;
 
-int map[HEIGHT][WIDTH];        // Mappa PGM caricata
-int closedList[HEIGHT][WIDTH]; // Lista chiusa
-Node openList[HEIGHT * WIDTH]; // Lista aperta
+int **map;        // Mappa PGM caricata (aggiornata dinamicamente)
+int **closedList; // Lista chiusa
+Node *openList;   // Lista aperta
 int openListSize = 0;
 
-Point path[HEIGHT * WIDTH]; // Array per memorizzare il percorso
-int pathLength = 0;         // Lunghezza del percorso
+Point *path;        // Array per memorizzare il percorso (aggiornata dinamicamente)
+int pathLength = 0; // Lunghezza del percorso
+
+// Funzione per allocare la memoria per la mappa e le liste
+void allocateMemory()
+{
+    map = (int **)malloc(HEIGHT * sizeof(int *));
+    closedList = (int **)malloc(HEIGHT * sizeof(int *));
+    for (int i = 0; i < HEIGHT; i++)
+    {
+        map[i] = (int *)malloc(WIDTH * sizeof(int));
+        closedList[i] = (int *)malloc(WIDTH * sizeof(int));
+    }
+    openList = (Node *)malloc(HEIGHT * WIDTH * sizeof(Node));
+    path = (Point *)malloc(HEIGHT * WIDTH * sizeof(Point));
+}
 
 // Funzione per caricare la mappa PGM
 void loadMap(const char *filename)
@@ -41,6 +55,8 @@ void loadMap(const char *filename)
     fscanf(file, "%s", format);
     fscanf(file, "%d %d", &WIDTH, &HEIGHT);
     fscanf(file, "%d", &max_value);
+
+    allocateMemory(); // Alloca la memoria dopo aver letto le dimensioni
 
     for (int y = 0; y < HEIGHT; y++)
     {
@@ -190,6 +206,17 @@ int main()
     }
 
     aStar(start, goal);
+
+    // Libera la memoria allocata
+    for (int i = 0; i < HEIGHT; i++)
+    {
+        free(map[i]);
+        free(closedList[i]);
+    }
+    free(map);
+    free(closedList);
+    free(openList);
+    free(path);
 
     return 0;
 }
