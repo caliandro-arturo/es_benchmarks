@@ -2,6 +2,7 @@
  * @file visualizer.c
  * @author Arturo Caliandro (arturo.caliandro AT mail.polimi.it)
  * @brief Time series visualizer.
+ * The input is read and then drawn as a graph using the Bresenham algorithm.
  */
 
 #include <math.h>
