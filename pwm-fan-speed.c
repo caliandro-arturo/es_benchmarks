@@ -4,24 +4,6 @@
  * This program is a simulation of the effect of a fan, if it was applied
  * on the system for which a energy production time series is given.
  *
- * Input:
- * - path to a file containing the energy production time series, measured
- *   at intervals of time of length DT (defined in code), in Joule;
- * - a threshold temperature in degrees Celsius, used to compute the error
- *   for the fan PID controller;
- * - the maximum airflow of the fan in cubic meters per second;
- * - the three parameters of the PID controller: Kp, Ki and Kd, defining
- *   respectively the proportional, integral and derivative contribute.
- *
- * Output:
- * - a file, called "output.csv", containing the same number of rows as
- *   the input file, and three columns, respectively:
- *   - the temperature of the aluminium surface, subject to natural
- *     convection only;
- *   - the temperature of the aluminium surface, subject to both natural
- *     and forced convection (due to the fan action);
- *   - the duty-cycle used to control the fan.
- *
  * Some assumptions have been made on the system to simplify the model:
  * - the system consists in a vertical aluminium square of area
  *   10x10 cm^2 and a small volume;
@@ -34,14 +16,24 @@
  */
 
 #include <math.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
+
+#define INPUT_SIZE 100
+double input[INPUT_SIZE] = {
+    5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
+    5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
+    5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, .0,  .0,  .0,  .0,  .0,
+    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,
+    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,
+    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,
+    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0}; // [J]
+#define TEMP_TH 50                                    // [°C]
+#define AIRFLOW 0.07                                  // [m^3/s]
+#define DT 1                                          // [s]
 
 // PID controller values
-float Kp;
-float Ki;
-float Kd;
+float Kp = 1;
+float Ki = 1;
+float Kd = 0;
 
 // An aluminium square
 #define SURFACE_AREA 0.01  // [m^2]
@@ -64,7 +56,6 @@ float Kd;
 // General constants
 #define g 9.81    // [m/s^2]
 #define K0 273.15 // [K] Kelvin absolute zero
-#define DT 1      // [s]
 
 // Fan characteristics
 typedef struct {
@@ -80,7 +71,7 @@ typedef struct {
     double __prev_err;    // Previous error
 } status_t;
 
-int get_next_input_value(double *value, FILE *fp);
+// int get_next_input_value(double *value, FILE *fp);
 double evaluate_temperature_increment(double heat_diff);
 double evaluate_natural_cooling(double temp);
 double evaluate_fan_cooling(fan_t fan, status_t status);
@@ -89,60 +80,15 @@ double grashof(double temp);
 double reynolds(fan_t fan, double temp);
 
 int main(int argc, char *argv[]) {
-    // Parsing the input
-    if (argc != 7) {
-        printf("Usage: %s temps_file threshold_temp fan_airflow_m^3/sec Kp Ki "
-               "Kd\n",
-               argv[0]);
-        exit(1);
-    }
-    char *filename = argv[1];
-    FILE *input = fopen(filename, "r");
-    if (input == NULL) {
-        perror(filename);
-        exit(EXIT_FAILURE);
-    }
-    char *endptr;
-    const double temp_th = strtod(argv[2], &endptr);
-    if (temp_th == 0 && endptr == argv[2]) {
-        puts("Error: the threshold temperature must be a float number.");
-        exit(EXIT_FAILURE);
-    }
-    double airflow = strtod(argv[3], &endptr);
-    if (airflow == 0 && endptr == argv[3]) {
-        puts("Error: the airflow must be a float number.");
-        exit(EXIT_FAILURE);
-    }
+    const double temp_th = TEMP_TH;
+    double airflow = AIRFLOW;
     fan_t fan = {airflow / FAN_AREA, 0.0};
-    Kp = strtof(argv[4], &endptr);
-    if (Kp == 0 && endptr == argv[4]) {
-        puts("Error: the Kp parameter must be a float number.");
-        exit(EXIT_FAILURE);
-    }
-    Ki = strtof(argv[5], &endptr);
-    if (Ki == 0 && endptr == argv[5]) {
-        puts("Error: the Ki parameter must be a float number.");
-        exit(EXIT_FAILURE);
-    }
-    Kd = strtof(argv[6], &endptr);
-    if (Kp == 0 && endptr == argv[6]) {
-        puts("Error: the Kd parameter must be a float number.");
-        exit(EXIT_FAILURE);
-    }
-    // Assuming that the system starts at ambient temperature
     status_t status = {AMBIENT_TEMP, AMBIENT_TEMP, 0, 0};
-    double heat_diff;
-    int ret_code = get_next_input_value(&heat_diff, input);
-    if (ret_code != 0) {
-        puts("Error at input line 1: invalid data.");
-        fclose(input);
-        exit(EXIT_FAILURE);
-    }
-    double temp_delta, cooling, richardson;
-    FILE *output = fopen("output.csv", "w");
-    int count = 1;
-    while (ret_code == 0) {
+    double heat_diff, temp_delta, cooling, richardson;
+    int count = 0;
+    for (int i = 0; i < INPUT_SIZE; ++i) {
         // Temperature increment
+        heat_diff = input[i];
         temp_delta = evaluate_temperature_increment(heat_diff);
         status.current_temp += temp_delta;
         status.expected_temp += temp_delta;
@@ -160,40 +106,10 @@ int main(int argc, char *argv[]) {
             cooling = evaluate_fan_cooling(fan, status);
         }
         status.expected_temp -= evaluate_temperature_increment(cooling);
+        // Evaluate new duty cycle
         fan.DC = evaluate_new_dc(&status, temp_th);
-        fprintf(output, "%le, %le, %.3f\n", status.current_temp,
-                status.expected_temp, fan.DC);
-        ret_code = get_next_input_value(&heat_diff, input);
-        count++;
     }
-    fclose(input);
-    fclose(output);
-    if (ret_code != EOF) {
-        printf("Error at input line %d: invalid data.\n", count);
-        exit(EXIT_FAILURE);
-    }
-    return EXIT_SUCCESS;
-}
-
-/**
- * @brief Read the next value from the input file.
- *
- * @param value the read value, casted to double
- * @param fd the file descriptor
- *
- * @return 0 if the value has been read correctly, EOF if the EOF has been
- *         reached, 1 if there was an error during the conversion.
- */
-int get_next_input_value(double *value, FILE *fp) {
-    static char line[26];
-    size_t len;
-    int status = 0;
-    if (fgets(line, sizeof(line), fp) == NULL) {
-        status = EOF;
-    } else if (sscanf(line, "%lf", value) != 1) {
-        status = 1;
-    }
-    return status;
+    return 0;
 }
 
 /**
