@@ -2,19 +2,9 @@
  * @file visualizer.c
  * @author Arturo Caliandro (arturo.caliandro AT mail.polimi.it)
  * @brief Time series visualizer.
- * Input:
- * - path to a file containing a time series;
- * - width of the output image;
- * - height of the output image.
- * Output:
- * - the image representing the signal, in .pbm (Portable BitMap) format.
  */
 
-#include <errno.h>
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 typedef struct {
     int width;       // The width of the image
@@ -24,201 +14,138 @@ typedef struct {
     double min;      // The minimum value found so far
 } image_data;
 
-#define MAX_WIDTH 1920
-#define MAX_HEIGHT 1080
+#define INPUT_SIZE 100
+double input[INPUT_SIZE] = {3.869142818076724666e+00, 2.841240192715680735e+00,
+                            3.483596684378727382e+00, 3.374880936613904758e+00,
+                            3.462841926188640063e+00, 3.971900700455767819e+00,
+                            4.487176776887483065e+00, 7.445005609974871819e-01,
+                            2.571702504147584722e+00, 1.997184222132831088e+00,
+                            4.479472507723974317e+00, 7.138910016166825301e+00,
+                            9.205652655329789269e+00, 7.899842457474038682e+00,
+                            5.442229212227376323e+00, 1.320651671334561961e+00,
+                            3.640403815985101765e+00, 6.125096255084139241e-01,
+                            4.674671713856629829e+00, 3.840888872016131828e+00,
+                            3.032146072140213366e+00, 3.594445619712988815e+00,
+                            1.782528105378214267e+00, 4.897143460907924073e+00,
+                            4.595499906613166985e+00, 3.490005042076675057e+00,
+                            8.242819383957048274e+00, 7.912690478227514923e+00,
+                            2.444308312885862478e+00, 2.187659286528051528e+00,
+                            4.265252526669438105e+00, 3.487268875573542370e+00,
+                            6.884198011780201520e-01, 3.434412733401206008e+00,
+                            6.587461279108257628e+00, 1.030327560142615795e+01,
+                            1.093801712010700022e+01, 7.386354743033987980e+00,
+                            5.080016556519407089e+00, 5.030656895578113463e+00,
+                            3.858457358123344783e+00, 5.198720623951137654e+00,
+                            1.847616729676342384e+00, 0.000000000000000000e+00,
+                            1.978731192012662454e+00, 6.666743281746511762e+00,
+                            6.067095076203656845e+00, 6.198526313926985942e+00,
+                            9.503096283952434220e+00, 8.376361749030662551e+00,
+                            9.112312916889987235e+00, 8.903113771732359183e+00,
+                            1.489866333744331861e+00, 1.280529919893908186e+00,
+                            4.981086228820915451e+00, 4.332318380409435399e+00,
+                            9.529053158885730568e+00, 1.092658528111184424e+01,
+                            1.225580568779378865e+01, 1.022649575319498716e+01,
+                            1.252170854829885194e+01, 1.147732400875366565e+01,
+                            1.478805964475810342e+01, 1.258717729459071855e+01,
+                            7.083368398932622156e+00, 5.368315747705430852e+00,
+                            3.915277460612154758e+00, 2.603466522568715469e+00,
+                            1.641425581905664455e-01, 6.760693091495694418e+00,
+                            3.441490874976572911e+00, 5.818781311869681616e+00,
+                            5.851490432670162889e+00, 4.098702857116828469e+00,
+                            4.905286615857199273e+00, 7.959179571644271256e+00,
+                            4.642632672039132657e+00, 5.356402160098403087e+00,
+                            3.078411785360566366e+00, 2.307598154684447955e+00,
+                            0.000000000000000000e+00, 1.923860793987666629e+00,
+                            3.841956591007800625e+00, 9.841549654354654342e-01,
+                            0.000000000000000000e+00, 0.000000000000000000e+00,
+                            0.000000000000000000e+00, 2.513016913506181393e-01,
+                            0.000000000000000000e+00, 1.579965723494272112e+00,
+                            2.543264628410263128e+00, 8.191522405106015370e+00,
+                            7.881856824628884262e+00, 7.178803122663416580e+00,
+                            9.011493658470167034e+00, 8.833482709777433328e+00,
+                            9.938109436085706960e+00, 6.990229225213370867e+00,
+                            2.243190590393101758e+00, 2.107190745065088855e+00};
+image_data im_data = {.width = 1920, .height = 1080};
 
-void abort_program(FILE *input, FILE *output);
-int count_lines(FILE *input);
-double *get_values(FILE *input, int *n, double *min, double *max);
-void draw_line(image_data im_data, char image[im_data.height][im_data.width],
-               int x_0, double y_0, double y_1);
+void get_values(int n, double *min, double *max);
+void draw_line(char image[im_data.height][im_data.width], int x_0, double y_0,
+               double y_1);
 
 int main(int argc, char *argv[]) {
-    if (argc - 1 != 3) {
-        fprintf(stderr, "Usage: %s input_file img_width img_height\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-    // Read image and input size
-    FILE *input = fopen(argv[1], "r");
-    if (input == NULL) {
-        fprintf(stderr, "Error when opening %s: %s\n", argv[1],
-                strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    char *endptr;
-    int width = strtol(argv[2], &endptr, 10);
-    if (endptr == argv[2]) {
-        fputs("Width value in invalid format.\n", stderr);
-        abort_program(input, NULL);
-    } else if (width <= 0 || width > MAX_WIDTH) {
-        fprintf(stderr, "Width value must be a number between 0 and %d.\n",
-                MAX_WIDTH);
-        abort_program(input, NULL);
-    }
-    int height = strtol(argv[3], &endptr, 10);
-    if (endptr == argv[3]) {
-        fputs("Height value in invalid format.\n", stderr);
-        abort_program(input, NULL);
-    } else if (width <= 0 || width > MAX_WIDTH) {
-        fprintf(stderr, "Height value must be a number between 0 and %d.\n",
-                MAX_HEIGHT);
-        abort_program(input, NULL);
-    }
-    int x_max;
-    double min, max;
-    double *y = get_values(input, &x_max, &min, &max);
-    // From now on, errors are not due to input
-    image_data im_data = {.width = width, .height = height, .min = min};
     char image[im_data.height][im_data.width];
     for (int i = 0; i < im_data.height; ++i) {
         for (int j = 0; j < im_data.width; ++j) {
             image[i][j] = '0';
         }
     }
+    double y_max;
     // Check if time series fits horizontally
-    if (x_max > im_data.width) {
-        printf("Input too big for the picture: truncating to the first %d "
-               "values\n",
-               im_data.width);
+    int x_max = INPUT_SIZE;
+    if (INPUT_SIZE > im_data.width) {
+        // Input too big for the picture: truncating to the values compatible
+        // with the width of the image
         x_max = im_data.width;
         // Find the maximum and the minimum, again
-        min = INFINITY;
-        max = -INFINITY;
-        for (int i = 0; i < x_max; ++i) {
-            if (y[i] > max) {
-                max = y[i];
-            }
-            if (y[i] < min) {
-                min = y[i];
-            }
-        }
-        im_data.min = min;
+        // Scale maximum and minimum according to size of the image
     }
-    // Scale maximum and minimum according to size of the image
-    im_data.x_factor = width / x_max; // >= 1
-    if (im_data.min == max) {
+    get_values(x_max, &y_max, &im_data.min);
+    im_data.x_factor = im_data.width / x_max; // >= 1
+    if (im_data.min == y_max) {
         // Constant value, to be plot in the half of the image as a line
-        im_data.min -= (height - 1) / 2.0;
+        im_data.min -= (im_data.height - 1) / 2.0;
         im_data.y_factor = 1;
     } else {
         // To scale a y value, the used formula is:
         // y_scaled = (height-1)*(y-min)/(max - min)
-        im_data.y_factor = (im_data.height - 1) / (max - im_data.min);
+        im_data.y_factor = (im_data.height - 1) / (y_max - im_data.min);
     }
     // For each couple of point of the input draw a line
     for (int i = 1; i < x_max; ++i) {
-        draw_line(im_data, image, i, y[i - 1], y[i]);
+        draw_line(image, i, input[i - 1], input[i]);
     }
-    // Write image on a file
-    FILE *output = fopen("output.pbm", "w");
-    fputs("P1\n", output);
-    fprintf(output, "%d %d\n", im_data.width, im_data.height);
-    for (int i = 0; i < im_data.height; ++i) {
-        for (int j = 0; j < im_data.width; ++j) {
-            fputc(image[i][j], output);
-        }
-        fputc('\n', output);
-    }
-    // Close every file
-    fclose(input);
-    fclose(output);
-    free(y);
-    return EXIT_SUCCESS;
+    return 0;
 }
 
 /**
- * @brief Close the open files, then exit with failure.
+ * @brief Finds the min-max values inside the first n values of the input.
  *
- * @param input the input file
- * @param output the output file
- */
-void abort_program(FILE *input, FILE *output) {
-    if (input != NULL) {
-        fclose(input);
-    }
-    if (output != NULL) {
-        fclose(output);
-    }
-    exit(EXIT_FAILURE);
-}
-
-/**
- * @brief Count the lines of the input file.
- *
- * @param input the input file
- * @return int: the number of lines, or -1 if there was an error
- */
-int count_lines(FILE *input) {
-    int count = 0;
-    char line[26];
-    while (fgets(line, sizeof(line), input) != NULL) {
-        count++;
-    }
-    if (ferror(input) != 0) {
-        return -1;
-    }
-    // Then it is EOF
-    rewind(input);
-    return count;
-}
-
-/**
- * @brief Read the input file and put the values in a heap-allocated array.
- *        If there is an error while reading the file, the program is aborted.
- *
- * @param input the input file
- * @param n the address of a variable in which the size of the array will
- *          be stored
+ * @param n the number of values to consider
  * @param min the minimum found input value
  * @param max the maximum found input value
- * @return double *: the array with the input values, to be freed by the caller.
  */
-double *get_values(FILE *input, int *n, double *min, double *max) {
-    *n = count_lines(input);
-    if (*n == -1) {
-        perror("count_lines");
-        abort_program(input, NULL);
-    }
-    double *values = malloc(*n * sizeof(double));
-    char line[26];
-    char *endptr;
+void get_values(int n, double *min, double *max) {
     *min = INFINITY;
     *max = -INFINITY;
-    for (int i = 0; i < *n; ++i) {
-        values[i] = strtod(fgets(line, sizeof(line), input), &endptr);
-        if (values[i] == 0 && endptr == line) {
-            fprintf(stderr, "Error at input line %d: invalid data.\n", i);
-            free(values);
-            abort_program(input, NULL);
+    for (int i = 0; i < n; ++i) {
+        if (input[i] < *min) {
+            *min = input[i];
         }
-        if (values[i] < *min) {
-            *min = values[i];
-        }
-        if (values[i] > *max) {
-            *max = values[i];
+        if (input[i] > *max) {
+            *max = input[i];
         }
     }
-    return values;
 }
 
 /**
  * @brief Draw a line, using the Bresenham's Line Drawing algorithm.
  *
- * @param im_data the image metadata
  * @param image the image representation
  * @param x_0 the final x value (used to find the start)
  * @param y_0 the first y value
  * @param y_1 the second y value
  */
-void draw_line(image_data im_data, char image[im_data.height][im_data.width],
-               int x_1, double y_0, double y_1) {
+void draw_line(char image[im_data.height][im_data.width], int x_1, double y_0,
+               double y_1) {
     x_1 *= im_data.x_factor;
     int x = x_1 - im_data.x_factor;
     int dx = im_data.x_factor;
     int sign_x = 1;
     int y = im_data.height - (im_data.y_factor * (y_0 - im_data.min)) - 1;
     int y1 = im_data.height - (im_data.y_factor * (y_1 - im_data.min)) - 1;
-    int dy = -abs(y1 - y);
+    int dy = -(y1 - y);
+    if (dy > 0) {
+        dy *= -1;
+    }
     int sign_y = y < y1 ? 1 : -1;
     int err = dx + dy;
     int e2;
