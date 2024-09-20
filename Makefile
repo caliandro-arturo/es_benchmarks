@@ -1,8 +1,19 @@
 CFLAGS = -std=c11
-objects =
+LDFLAGS = -lm
+BENCHES =
+TESTS = $(addsuffix -test, $(BENCHES))
 
-$(objects): %.o: %.c
-	gcc $^ -o $@
+all: CFLAGS += -O3
+all: $(BENCHES) $(TESTS)
+
+debug: CFLAGS += -ggdb3
+debug: $(TESTS)
+
+$(BENCHES):
+	$(CC) $@.c -o $@ $(CFLAGS) $(LDFLAGS)
+
+$(TESTS):
+	$(CC) $@.c -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
-	rm -f *.c *.o
+	rm -f $(BENCHES) $(TESTS)
