@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
     fan_t fan = {airflow / FAN_AREA, 0.0};
     status_t status = {AMBIENT_TEMP, AMBIENT_TEMP, 0, 0};
     double heat_diff, temp_delta, cooling, richardson;
-    int count = 0;
     for (int i = 0; i < INPUT_SIZE; ++i) {
         // Temperature increment
         heat_diff = input[i];
