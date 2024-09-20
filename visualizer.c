@@ -15,6 +15,8 @@ typedef struct {
     double min;      // The minimum value found so far
 } image_data;
 
+#define WIDTH 1920
+#define HEIGHT 1080
 #define INPUT_SIZE 100
 double input[INPUT_SIZE] = {3.869142818076724666e+00, 2.841240192715680735e+00,
                             3.483596684378727382e+00, 3.374880936613904758e+00,
@@ -66,7 +68,7 @@ double input[INPUT_SIZE] = {3.869142818076724666e+00, 2.841240192715680735e+00,
                             9.011493658470167034e+00, 8.833482709777433328e+00,
                             9.938109436085706960e+00, 6.990229225213370867e+00,
                             2.243190590393101758e+00, 2.107190745065088855e+00};
-image_data im_data = {.width = 1920, .height = 1080};
+image_data im_data = {.width = WIDTH, .height = HEIGHT};
 
 void get_values(int n, double *min, double *max);
 void draw_line(char image[im_data.height][im_data.width], int x_0, double y_0,
