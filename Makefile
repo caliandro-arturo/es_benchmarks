@@ -1,12 +1,19 @@
-CCFLAGS = -std=c11
-LIBS = -lm
-objects = pwm-fan-speed.o
+CFLAGS = -std=c11
+LDFLAGS = -lm
+BENCHES = pwm-fan-speed
+TESTS = $(addsuffix -test, $(BENCHES))
 
-debug: CCFLAGS += -ggdb3
-debug: $(objects)
+all: CFLAGS += -O3
+all: $(BENCHES) $(TESTS)
 
-$(objects): %.o: %.c
-	$(CC) $(CCFLAGS) $^ -o $@ $(LIBS)
+debug: CFLAGS += -ggdb3
+debug: $(TESTS)
+
+$(BENCHES):
+	$(CC) $@.c -o $@ $(CFLAGS) $(LDFLAGS)
+
+$(TESTS):
+	$(CC) $@.c -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
-	rm -f *.o
+	rm -f $(BENCHES) $(TESTS)
