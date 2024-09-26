@@ -1,0 +1,195 @@
+/**
+ * @file real-time-compression.c
+ * @brief Implementation of the Huffman coding algorithm. A heap and a binary
+ * tree are used to implement the queue and the main structure of the coder.
+ */
+
+#include <math.h>
+
+char input[] =
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+    "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim "
+    "ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut "
+    "aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit "
+    "in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
+    "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui "
+    "officia deserunt mollit anim id est laborum.";
+int INPUT_SIZE = sizeof(input) - 1;
+
+// 'word' here means a 4-bytes variable.
+
+// Set the specified bit of the word to 1.
+#define BIT_SET(word, bit) ((word) |= (1 << (bit)))
+// Set the specified bit to 0.
+#define BIT_CLEAR(word, bit) ((word) &= ~(1 << (bit)))
+// Get the value of the read bit. Use it to compare to 0 only.
+#define BIT_READ(word, bit) ((word) & (1 << (bit)))
+// Get the index of the character bit inside a byte.
+#define CHAR_BIT_INDEX(chr) (((chr) - ' ') % (8 * sizeof(int)))
+// Get the index of the byte associated to the character.
+#define CHAR_MAP_INDEX(chr) (((chr) - ' ') / (8 * sizeof(int)))
+
+#define CHAR_DOMAIN_LEN 95 // == '~' - ' ' + 1;
+
+/**
+ * @brief Node to be used for both heap and tree.
+ */
+typedef struct {
+    // Bit map for the characters. Each bit represents the presence of a
+    // character into the symbol. Length 3 because floor(95/(8*sizeof(int))) = 3
+    // if sizeof(int) == 4.
+    //
+    // symbol[0]: ' ' -> '?'
+    // symbol[1]: '@' -> '_'
+    // symbol[2]: '`' -> '~' (31 bits used)
+    unsigned int symbol[3];
+
+    // Frequency of the symbol
+    int weight;
+} Node;
+
+int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]);
+
+// Heap
+void init_heap(int size, Node heap[size], int freq[CHAR_DOMAIN_LEN]);
+void insert(int *size, Node *heap, Node node); // TODO
+Node pop(int *size, Node *heap);               // TODO
+
+// Tree
+Node merge_nodes(Node a, Node b); // TODO
+// TODO: add the required methods to work on the Huffman tree
+
+// Common between heap and tree
+int left(int pos);
+int right(int pos);
+int parent(int pos);
+
+int main() {
+    // Compress the input
+    // Evaluate character statistics
+    int freq[CHAR_DOMAIN_LEN] = {0};
+    int total = compute_input_statistics(freq);
+    Node priority_queue[total];
+    init_heap(total, priority_queue, freq);
+    // While
+    // Print the output (on test version)
+    return 0;
+}
+
+/**
+ * @brief Counts the amount of different characters in the input and their
+ * frequencies.
+ *
+ * @param freq the array to use as histogram
+ * @return int: the amount of unique characters
+ */
+int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]) {
+    int total = 0;
+    int next_char;
+    for (int i = 0; i <= INPUT_SIZE; ++i) {
+        next_char = input[i] - ' ';
+        if (freq[next_char] == 0) {
+            total++;
+        }
+        freq[next_char]++;
+    }
+    return total;
+}
+
+/**
+ * @brief Parent of the node, given the index. The root is the only node
+ * that returns a negative index (namely -1).
+ *
+ * @param pos the position of the child
+ * @return int: the position of the parent
+ */
+int parent(int pos) { return floor((pos - 1) / 2.0); }
+
+/**
+ * @brief Left child of the node. No check against its actual existence is
+ * performed.
+ *
+ * @param pos the position of the parent
+ * @return int: the position of the left child
+ */
+int left(int pos) { return (pos << 1) + 1; }
+
+/**
+ * @brief Right child of the node. No check against its actual existence is
+ * performed.
+ *
+ * @param pos the position of the parent
+ * @return int: the position of the right child
+ */
+int right(int pos) { return (pos << 1) + 2; }
+
+void swap(Node *a, Node *b) {
+    Node *t = a;
+    a = b;
+    b = t;
+}
+
+/**
+ * @brief Notorious method to sort the heap.
+ *
+ * @param size the size of the heap
+ * @param heap the heap
+ */
+void heapify(int size, Node heap[size]) {
+    int start = size >> 1;
+    int end = size;
+    int root, child;
+    while (end > 1) {
+        if (start > 0) {
+            --start;
+        } else {
+            --end;
+            swap(&heap[0], &heap[end]);
+        }
+        // Sift down (start, end)
+        root = start;
+        while (left(root) < end) {
+            child = left(root);
+            if (child + 1 < end &&
+                heap[child].weight > heap[child + 1].weight) {
+                // here the '>' makes the difference between max and min sort
+                ++child;
+            }
+            if (heap[root].weight > heap[child].weight) { // Here again
+                swap(&heap[root], &heap[child]);
+                root = child;
+            } else {
+                break;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Initializes the heap with nodes such that each node contains a
+ * character and its frequency.
+ *
+ * @param size the size of the heap
+ * @param heap the heap
+ * @param freq the reference histogram
+ */
+void init_heap(int size, Node heap[size], int freq[CHAR_DOMAIN_LEN]) {
+    int cur = 0;
+    for (int i = 0; i < CHAR_DOMAIN_LEN && cur < size; ++i) {
+        if (freq[i] > 0) {
+            // Make node:
+            // 1. Set the symbol bitmap to 0
+            for (int j = 0; j < 3; ++j) {
+                heap[cur].symbol[j] = 0;
+            }
+            // 2. Set the character bit to 1
+            char ch = i + ' ';
+            int byte_index = CHAR_MAP_INDEX(ch);
+            int bit_index = CHAR_BIT_INDEX(ch);
+            BIT_SET(heap[cur].symbol[byte_index], bit_index);
+            heap[cur].weight = freq[i];
+            ++cur;
+        }
+    }
+    // if cur != size, there should be an error somewhere
+}
