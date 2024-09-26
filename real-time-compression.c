@@ -71,7 +71,14 @@ int main() {
     int total = compute_input_statistics(freq);
     Node priority_queue[total];
     init_heap(total, priority_queue, freq);
-    // While
+    // TODO: implement actual Huffman coding:
+    // while(at least 2 nodes inside the queue/heap) {
+    //   pop two nodes from the queue;
+    //   merge them in a new node
+    //   add the three nodes in the three, the merge one as the parent
+    //   fix the tree (hardest part imho)
+    //   insert the merge node into the heap
+    // }
     // Print the output (on test version)
     return 0;
 }
