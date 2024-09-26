@@ -1,10 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <limits.h>
 
-int WIDTH = 50;  // Larghezza della mappa (aggiornata dinamicamente)
-int HEIGHT = 50; // Altezza della mappa (aggiornata dinamicamente)
+#define WIDTH 5  // Larghezza della mappa
+#define HEIGHT 5 // Altezza della mappa
 
 typedef struct
 {
@@ -18,67 +15,77 @@ typedef struct
     Point parent;
 } Node;
 
-int **map;        // Mappa PGM caricata (aggiornata dinamicamente)
-int **closedList; // Lista chiusa
-Node *openList;   // Lista aperta
+// Mappa percorso obbligato
+int map[HEIGHT][WIDTH] = {
+    {0, 0, 0, 1, 0},
+    {0, 1, 0, 1, 0},
+    {0, 1, 0, 1, 0},
+    {0, 1, 1, 0, 0},
+    {0, 0, 0, 0, 1}};
+
+Point start = {2, 2}; // Punto di partenza
+Point goal = {4, 0};  // Punto di arrivo
+
+/* // Mappa percorso chiuso
+int map[HEIGHT][WIDTH] = {
+    {1, 0, 0, 0, 0},
+    {0, 1, 0, 0, 0},
+    {0, 0, 1, 0, 0},
+    {0, 0, 0, 1, 0},
+    {0, 0, 0, 0, 1}};
+
+Point start = {1, 4}; // Punto di partenza
+Point goal = {3, 1};  // Punto di arrivo */
+
+/* // Mappa doppio percorso
+int map[HEIGHT][WIDTH] = {
+    {0, 0, 0, 0, 0},
+    {0, 1, 1, 1, 0},
+    {0, 1, 1, 1, 0},
+    {0, 1, 1, 1, 0},
+    {0, 0, 0, 0, 0}};
+
+Point start = {0, 4}; // Punto di partenza
+Point goal = {2, 0};  // Punto di arrivo */
+
+/* // Mappa errore
+int map[HEIGHT][WIDTH] = {
+    {0, 0, 0, 1, 0},
+    {0, 1, 0, 1, 0},
+    {0, 1, 0, 1, 0},
+    {0, 1, 1, 0, 0},
+    {0, 0, 0, 0, 1}};
+
+Point start = {1, 1}; // Punto di partenza
+Point goal = {0, 4};  // Punto di arrivo */
+
+// Liste chiuse e aperte
+int closedList[HEIGHT][WIDTH] = {0}; // Lista chiusa
+Node openList[WIDTH * HEIGHT];       // Lista aperta
+Node closedNodes[WIDTH * HEIGHT];    // Lista dei nodi chiusi
 int openListSize = 0;
+int closedListSize = 0;
 
-Point *path;        // Array per memorizzare il percorso (aggiornata dinamicamente)
-int pathLength = 0; // Lunghezza del percorso
-
-// Funzione per allocare la memoria per la mappa e le liste
-void allocateMemory()
-{
-    map = (int **)malloc(HEIGHT * sizeof(int *));
-    closedList = (int **)malloc(HEIGHT * sizeof(int *));
-    for (int i = 0; i < HEIGHT; i++)
-    {
-        map[i] = (int *)malloc(WIDTH * sizeof(int));
-        closedList[i] = (int *)malloc(WIDTH * sizeof(int));
-    }
-    openList = (Node *)malloc(HEIGHT * WIDTH * sizeof(Node));
-    path = (Point *)malloc(HEIGHT * WIDTH * sizeof(Point));
-}
-
-// Funzione per caricare la mappa PGM
-void loadMap(const char *filename)
-{
-    FILE *file = fopen(filename, "r");
-    if (!file)
-    {
-        printf("Errore nell'apertura del file %s\n", filename);
-        exit(EXIT_FAILURE);
-    }
-
-    char format[3];
-    int max_value;
-    fscanf(file, "%s", format);
-    fscanf(file, "%d %d", &WIDTH, &HEIGHT);
-    fscanf(file, "%d", &max_value);
-
-    allocateMemory(); // Alloca la memoria dopo aver letto le dimensioni
-
-    for (int y = 0; y < HEIGHT; y++)
-    {
-        for (int x = 0; x < WIDTH; x++)
-        {
-            fscanf(file, "%d", &map[y][x]);
-        }
-    }
-
-    fclose(file);
-}
+Point path[WIDTH * HEIGHT]; // Array statico per il percorso
+int pathLength = 0;         // Lunghezza del percorso
 
 // Funzione per calcolare l'Heuristica (distanza euclidea)
 int calculateHeuristic(Point start, Point goal)
 {
-    return (int)round(sqrt((start.x - goal.x) * (start.x - goal.x) + (start.y - goal.y) * (start.y - goal.y)));
+    return (start.x - goal.x) * (start.x - goal.x) + (start.y - goal.y) * (start.y - goal.y);
 }
 
 // Funzione per aggiungere un nodo alla lista aperta
 void addToOpenList(Node node)
 {
     openList[openListSize++] = node;
+}
+
+// Funzione per aggiungere un nodo alla lista chiusa
+void addToClosedList(Node node)
+{
+    closedNodes[closedListSize++] = node;
+    closedList[node.point.y][node.point.x] = 1;
 }
 
 // Funzione per trovare il nodo con il costo f più basso
@@ -119,6 +126,21 @@ int isEqual(Point a, Point b)
     return a.x == b.x && a.y == b.y;
 }
 
+// Funzione per trovare un nodo nella lista chiusa
+Node getNodeFromClosedList(Point p)
+{
+    for (int i = 0; i < closedListSize; i++)
+    {
+        if (isEqual(closedNodes[i].point, p))
+        {
+            return closedNodes[i];
+        }
+    }
+    // Ritorna un nodo vuoto (non dovremmo mai arrivare qui se il percorso esiste)
+    Node emptyNode = {{-1, -1}, 0, 0, 0, {-1, -1}};
+    return emptyNode;
+}
+
 // Funzione per trovare il percorso utilizzando l'algoritmo A*
 void aStar(Point start, Point goal)
 {
@@ -128,25 +150,21 @@ void aStar(Point start, Point goal)
     while (openListSize > 0)
     {
         Node currentNode = getLowestFCostNode();
-        closedList[currentNode.point.y][currentNode.point.x] = 1;
+        addToClosedList(currentNode);
 
         if (isEqual(currentNode.point, goal))
         {
-            // Percorso trovato, traccia il percorso
-            printf("Percorso trovato:\n");
+            printf("Percorso trovato!\n");
             Node pathNode = currentNode;
+
+            // Ricostruisce il percorso risalendo i genitori
             while (pathNode.parent.x != -1 && pathNode.parent.y != -1)
             {
-                path[pathLength++] = pathNode.point; // Memorizza il punto nel percorso
-                for (int i = 0; i < openListSize; i++)
-                {
-                    if (isEqual(openList[i].point, pathNode.parent))
-                    {
-                        pathNode = openList[i];
-                        break;
-                    }
-                }
+                path[pathLength++] = pathNode.point;
+                pathNode = getNodeFromClosedList(pathNode.parent);
             }
+            // Aggiunge il nodo di partenza al percorso
+            path[pathLength++] = startNode.point;
 
             // Stampa il percorso dall'inizio alla fine
             for (int i = pathLength - 1; i >= 0; i--)
@@ -172,6 +190,7 @@ void aStar(Point start, Point goal)
                 int h_cost = calculateHeuristic(neighbor, goal);
                 int f_cost = g_cost + h_cost;
 
+                // Aggiunge il vicino alla lista aperta
                 Node neighborNode = {neighbor, g_cost, h_cost, f_cost, currentNode.point};
                 addToOpenList(neighborNode);
             }
@@ -183,16 +202,6 @@ void aStar(Point start, Point goal)
 
 int main()
 {
-    Point start, goal;
-
-    printf("Inserisci le coordinate del punto di partenza (x y): ");
-    scanf("%d %d", &start.x, &start.y);
-
-    printf("Inserisci le coordinate del punto di arrivo (x y): ");
-    scanf("%d %d", &goal.x, &goal.y);
-
-    loadMap("/mnt/c/Users/andre/OneDrive/Desktop/mappa1.pgm");
-
     if (!isValid(start) || isObstacle(start))
     {
         printf("Il punto di partenza non è valido o è un ostacolo.\n");
@@ -206,17 +215,6 @@ int main()
     }
 
     aStar(start, goal);
-
-    // Libera la memoria allocata
-    for (int i = 0; i < HEIGHT; i++)
-    {
-        free(map[i]);
-        free(closedList[i]);
-    }
-    free(map);
-    free(closedList);
-    free(openList);
-    free(path);
 
     return 0;
 }
