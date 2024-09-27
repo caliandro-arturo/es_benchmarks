@@ -31,18 +31,14 @@ int INPUT_SIZE = sizeof(input) - 1;
 
 #define CHAR_DOMAIN_LEN 95 // == '~' - ' ' + 1;
 
+const unsigned int SYMBOL_BYTE_LEN = ceil(CHAR_DOMAIN_LEN / (8.0*sizeof(int)));
 /**
  * @brief Node to be used for both heap and tree.
  */
 typedef struct {
     // Bit map for the characters. Each bit represents the presence of a
-    // character into the symbol. Length 3 because floor(95/(8*sizeof(int))) = 3
-    // if sizeof(int) == 4.
-    //
-    // symbol[0]: ' ' -> '?'
-    // symbol[1]: '@' -> '_'
-    // symbol[2]: '`' -> '~' (31 bits used)
-    unsigned int symbol[3];
+    // character into the symbol.
+    unsigned int symbol[SYMBOL_BYTE_LEN];
 
     // Frequency of the symbol
     int weight;
