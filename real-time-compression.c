@@ -47,18 +47,28 @@ typedef struct {
 int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]);
 
 // Heap
+
+// Initialize the heap
 void init_heap(int size, Node heap[size], int freq[CHAR_DOMAIN_LEN]);
-void insert(int *size, Node *heap, Node node); // TODO
-Node pop(int *size, Node *heap);               // TODO
+// Insert a node in the heap
+void insert_in_heap(int *size, Node *heap, Node node); // TODO
+// Pop a node out of the heap
+Node pop(int *size, Node *heap); // TODO
 
 // Tree
-Node merge_nodes(Node a, Node b); // TODO
-// TODO: add the required methods to work on the Huffman tree
 
-// Common between heap and tree
-int left(int pos);
-int right(int pos);
-int parent(int pos);
+// Merge the symbol of two nodes, given their position in the tree, and return
+// the merged node
+Node merge_nodes(Node *tree, int node_a, int node_b); // TODO
+// Insert a node in the tree, at the end of the tree
+void insert_in_tree(int size, int *capacity, Node *tree, Node node); // TODO
+// Make the tree, once all the nodes have been inserted
+void sort_tree(int size, Node *tree); // TODO
+// Encode the character, and return in len the number of bits
+int encode(int size, Node *tree, char ch, int *len); // TODO
+// Decode until a character has been obtained, and return the amount of bits
+// used to decode
+char decode(int size, Node *tree, int input, int *len); // TODO
 
 int main() {
     // Compress the input
