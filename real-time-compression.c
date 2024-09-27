@@ -14,7 +14,7 @@ char input[] =
     "in voluptate velit esse cillum dolore eu fugiat nulla pariatur. "
     "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui "
     "officia deserunt mollit anim id est laborum.";
-int INPUT_SIZE = sizeof(input) - 1;
+unsigned int INPUT_SIZE = sizeof(input) - 1;
 
 // 'word' here means a 4-bytes variable.
 
