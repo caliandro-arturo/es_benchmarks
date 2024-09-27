@@ -115,7 +115,7 @@ int main() {
 int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]) {
     int total = 0;
     int next_char;
-    for (int i = 0; i <= INPUT_SIZE; ++i) {
+    for (unsigned int i = 0; i <= INPUT_SIZE; ++i) {
         next_char = input[i] - ' ';
         if (freq[next_char] == 0) {
             total++;
