@@ -16,7 +16,7 @@ char input[] =
     "officia deserunt mollit anim id est laborum.";
 unsigned int INPUT_SIZE = sizeof(input) - 1;
 
-// 'word' here means a 4-bytes variable.
+// 'word' here means a int-sized variable.
 
 // Set the specified bit of the word to 1.
 #define BIT_SET(word, bit) ((word) |= (1 << (bit)))
@@ -31,7 +31,9 @@ unsigned int INPUT_SIZE = sizeof(input) - 1;
 
 #define CHAR_DOMAIN_LEN 95 // == '~' - ' ' + 1;
 
-const unsigned int SYMBOL_BYTE_LEN = ceil(CHAR_DOMAIN_LEN / (8.0*sizeof(int)));
+// Adapt if the architecture's int size is not 4 bytes
+#define SYMBOL_BYTE_LEN 3 // (ceil(CHAR_DOMAIN_LEN / (8.0 * sizeof(int))));
+
 /**
  * @brief Node to be used for both heap and tree.
  */
