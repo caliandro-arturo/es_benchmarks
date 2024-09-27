@@ -94,7 +94,7 @@ int main() {
     // sort the tree (hardest part imho);
 
     // The size of the code is not bigger than the size of the input.
-    int huffman_code_space = ceil((float)INPUT_SIZE / sizeof(int));
+    int huffman_code_space = ceilf((float)INPUT_SIZE / sizeof(int));
     unsigned int code[huffman_code_space]; // The code is expressed bit-wise
     int code_len = 0;
     // TODO:
