@@ -40,8 +40,12 @@ typedef struct {
     // character into the symbol.
     unsigned int symbol[SYMBOL_BYTE_LEN];
 
-    // Frequency of the symbol
+    // Frequency of the symbol.
+    // If -1, the node is considered empty.
     int weight;
+
+    // Fields used by the tree. -1 means no child.
+    int left, right;
 } Node;
 
 int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]);
