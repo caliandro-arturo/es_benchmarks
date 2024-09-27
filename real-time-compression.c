@@ -81,15 +81,25 @@ int main() {
     int total = compute_input_statistics(freq);
     Node priority_queue[total];
     init_heap(total, priority_queue, freq);
+
     // TODO: implement actual Huffman coding:
     // while(at least 2 nodes inside the queue/heap) {
     //   pop two nodes from the queue;
-    //   merge them in a new node
-    //   add the three nodes in the three, the merge one as the parent
-    //   fix the tree (hardest part imho)
-    //   insert the merge node into the heap
+    //   merge them in a new node;
+    //   add the three nodes in the three, the merge one as the parent;
+    //   insert the merge node into the heap;
     // }
-    // Print the output (on test version)
+    // sort the tree (hardest part imho);
+
+    // The size of the code is not bigger than the size of the input.
+    int huffman_code_space = ceil((float)INPUT_SIZE / sizeof(int));
+    unsigned int code[huffman_code_space]; // The code is expressed bit-wise
+    int code_len = 0;
+    // TODO:
+    // Encode the string as bits in the variable "code";
+    // Print the output (on test version);
+    // Decode the string;
+    // Ensure that the decoding matches with the original string;
     return 0;
 }
 
