@@ -153,9 +153,9 @@ int left(int pos) { return (pos << 1) + 1; }
 int right(int pos) { return (pos << 1) + 2; }
 
 void swap(Node *a, Node *b) {
-    Node *t = a;
-    a = b;
-    b = t;
+    Node t = *a;
+    *a = *b;
+    *b = t;
 }
 
 /**
