@@ -273,3 +273,48 @@ void insert_in_tree(int *size, Node *tree, Node node) {
     node.inserted_at = *size;
     ++(*size);
 }
+
+int encode(int size, Node *tree, char ch, int *len) {
+    unsigned int ch_byte = CHAR_MAP_INDEX(ch);
+    unsigned int ch_bit = CHAR_BIT_INDEX(ch);
+    unsigned int code = 0;
+    Node node = tree[size - 1];
+    while (node.left != -1 && node.right != -1) {
+        if (BIT_READ(node.symbol[ch_byte], ch_bit) != 0) {
+            code <<= 1;
+            node = tree[node.left];
+        } else {
+            code = (code << 1) | 1;
+            node = tree[node.right];
+        } // all cases should have already been covered...
+        ++(*len);
+    }
+    return code;
+}
+
+char decode(int size, Node *tree, int input, int *len) {
+    Node node = tree[size - 1];
+    int byte;
+    do {
+        if (BIT_READ(input, 1) != 0) {
+            node = tree[node.right];
+        } else {
+            node = tree[node.left];
+        }
+        ++(*len);
+    } while (node.left != -1 && node.right != -1);
+    for (unsigned int i = 0; i < SYMBOL_BYTE_LEN; ++i) {
+        if (node.symbol[i] != 0) {
+            byte = i;
+            break;
+        }
+    }
+    unsigned int bit;
+    if (node.symbol[byte] == 1) {
+        bit = 0;
+    } else {
+        bit = __builtin_ctz(node.symbol[byte]);
+    }
+    char ch = bit + sizeof(int) * 8 * byte;
+    return ch;
+}
