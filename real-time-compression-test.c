@@ -49,6 +49,7 @@ typedef struct {
 
     // Fields used by the tree. -1 means no child.
     int left, right;
+    int inserted_at;
 } Node;
 
 int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]);
@@ -66,11 +67,11 @@ Node pop(int *size, Node *heap);
 
 // Merge the symbol of two nodes, given their position in the tree, and return
 // the merged node
-Node merge_nodes(Node *tree, int node_a, int node_b); // TODO
+Node merge_nodes(Node *tree, int node_a, int node_b);
 // Insert a node in the tree, at the end of the tree
-void insert_in_tree(int size, int *capacity, Node *tree, Node node); // TODO
+void insert_in_tree(int *size, Node *tree, Node node);
 // Make the tree, once all the nodes have been inserted
-void sort_tree(int size, Node *tree); // TODO
+void sort_tree(int size, Node *tree); // TODO: maybe not necessary
 // Encode the character, and return in len the number of bits
 int encode(int size, Node *tree, char ch, int *len); // TODO
 // Decode until a character has been obtained, and return the amount of bits
@@ -207,7 +208,11 @@ void init_heap(int size, Node heap[size], int freq[CHAR_DOMAIN_LEN]) {
             int byte_index = CHAR_MAP_INDEX(ch);
             int bit_index = CHAR_BIT_INDEX(ch);
             BIT_SET(heap[cur].symbol[byte_index], bit_index);
+            // 3. Initialize other parameters to default
             heap[cur].weight = freq[i];
+            heap[cur].inserted_at = -1;
+            heap[cur].left = -1;
+            heap[cur].right = -1;
             ++cur;
         }
     }
@@ -246,4 +251,25 @@ Node pop(int *size, Node *heap) {
         curr = candidate;
     }
     return to_extract;
+}
+
+Node merge_nodes(Node *tree, int node_a, int node_b) {
+    Node a = tree[node_a];
+    Node b = tree[node_b];
+    Node merge = {
+        .left = node_a, .right = node_b, .weight = a.weight + b.weight};
+    for (int i = 0; i < SYMBOL_BYTE_LEN; ++i) {
+        merge.symbol[i] = a.symbol[i] | b.symbol[i];
+    }
+    return merge;
+}
+
+void insert_in_tree(int *size, Node *tree, Node node) {
+    if (node.inserted_at != -1) {
+        // Already inserted
+        return;
+    }
+    tree[*size] = node;
+    node.inserted_at = *size;
+    ++(*size);
 }
