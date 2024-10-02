@@ -1,5 +1,5 @@
 /**
- * @file real-time-compression.c
+ * @file huffman-compression.c
  * @brief Implementation of the Huffman coding algorithm. A heap and a binary
  * tree are used to implement the queue and the main structure of the coder.
  */
