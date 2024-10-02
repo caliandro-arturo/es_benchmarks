@@ -1,6 +1,6 @@
 CFLAGS = -std=c11 -Wall -Wpedantic -Wextra
 LDFLAGS = -lm
-BENCHES = real-time-compression
+BENCHES = huffman-compression
 TESTS = $(addsuffix -test, $(BENCHES))
 
 all: CFLAGS += -O3
