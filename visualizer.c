@@ -74,7 +74,7 @@ void get_values(int n, double *min, double *max);
 void draw_line(char image[im_data.height][im_data.width], int x_0, double y_0,
                double y_1);
 
-int main(int argc, char *argv[]) {
+int main() {
     char image[im_data.height][im_data.width];
     for (int i = 0; i < im_data.height; ++i) {
         for (int j = 0; j < im_data.width; ++j) {
