@@ -79,7 +79,7 @@ double evaluate_new_dc(status_t *status, double th);
 double grashof(double temp);
 double reynolds(fan_t fan, double temp);
 
-int main(int argc, char *argv[]) {
+int main() {
     const double temp_th = TEMP_TH;
     double airflow = AIRFLOW;
     fan_t fan = {airflow / FAN_AREA, 0.0};
