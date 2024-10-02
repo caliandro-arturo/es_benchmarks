@@ -272,13 +272,13 @@ void insert_in_tree(unsigned int *size, Node *tree, Node *node) {
     ++(*size);
 }
 
-int encode(int size, Node *tree, char ch, int *len) {
+unsigned int encode(int size, Node *tree, char ch, unsigned int *len) {
     unsigned int ch_byte = CHAR_MAP_INDEX(ch);
     unsigned int ch_bit = CHAR_BIT_INDEX(ch);
     unsigned int code = 0;
     Node node = tree[size - 1];
     while (node.left != -1 && node.right != -1) {
-        if (BIT_READ(node.symbol[ch_byte], ch_bit) != 0) {
+        if (BIT_READ(tree[node.left].symbol[ch_byte], ch_bit) != 0) {
             code <<= 1;
             node = tree[node.left];
         } else {
