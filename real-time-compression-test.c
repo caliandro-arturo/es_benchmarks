@@ -254,8 +254,10 @@ Node pop(int *size, Node *heap) {
 Node merge_nodes(Node *tree, int node_a, int node_b) {
     Node a = tree[node_a];
     Node b = tree[node_b];
-    Node merge = {
-        .left = node_a, .right = node_b, .weight = a.weight + b.weight};
+    Node merge = {.left = node_a,
+                  .right = node_b,
+                  .weight = a.weight + b.weight,
+                  .inserted_at = -1};
     for (int i = 0; i < SYMBOL_BYTE_LEN; ++i) {
         merge.symbol[i] = a.symbol[i] | b.symbol[i];
     }
