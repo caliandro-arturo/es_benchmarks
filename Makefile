@@ -1,4 +1,4 @@
-CFLAGS = -std=c11
+CFLAGS = -std=c11 -Wall -Wpedantic -Wextra
 LDFLAGS = -lm
 BENCHES = pwm-fan-speed
 TESTS = $(addsuffix -test, $(BENCHES))
@@ -9,10 +9,10 @@ all: $(BENCHES) $(TESTS)
 debug: CFLAGS += -ggdb3
 debug: $(TESTS)
 
-$(BENCHES):
+$(BENCHES): clean
 	$(CC) $@.c -o $@ $(CFLAGS) $(LDFLAGS)
 
-$(TESTS):
+$(TESTS): clean
 	$(CC) $@.c -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
