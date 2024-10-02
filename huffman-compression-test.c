@@ -18,6 +18,8 @@ char input[] =
     "officia deserunt mollit anim id est laborum.";
 unsigned int INPUT_SIZE = sizeof(input) - 1;
 
+#define INT_BIT_SIZE sizeof(int) * 8
+
 // 'word' here means a int-sized variable.
 
 // Set the specified bit of the word to 1.
@@ -27,14 +29,14 @@ unsigned int INPUT_SIZE = sizeof(input) - 1;
 // Get the value of the read bit. Use it to compare to 0 only.
 #define BIT_READ(word, bit) ((word) & (1 << (bit)))
 // Get the index of the character bit inside a byte.
-#define CHAR_BIT_INDEX(chr) (((chr) - ' ') % (8 * sizeof(int)))
+#define CHAR_BIT_INDEX(chr) (((chr) - ' ') % (INT_BIT_SIZE))
 // Get the index of the byte associated to the character.
-#define CHAR_MAP_INDEX(chr) (((chr) - ' ') / (8 * sizeof(int)))
+#define CHAR_MAP_INDEX(chr) (((chr) - ' ') / (INT_BIT_SIZE))
 
 #define CHAR_DOMAIN_LEN 95 // == '~' - ' ' + 1;
 
 // Adapt if the architecture's int size is not 4 bytes
-#define SYMBOL_BYTE_LEN 3 // (ceil(CHAR_DOMAIN_LEN / (8.0 * sizeof(int))));
+#define SYMBOL_BYTE_LEN 3 // (ceil(CHAR_DOMAIN_LEN / INT_BIT_SIZE));
 
 /**
  * @brief Node to be used for both heap and tree.
@@ -104,8 +106,8 @@ int main() {
                                           // than the size of the input.
     unsigned int code[huffman_code_space];
     unsigned int code_len = encode_input(tree, tree_size, code);
-    unsigned int last_cell = ceilf((float)code_len / (sizeof(int) * 8));
-    unsigned int last_cell_bit = code_len % (sizeof(int) * 8);
+    unsigned int last_cell = ceilf((float)code_len / (INT_BIT_SIZE));
+    unsigned int last_cell_bit = code_len % (INT_BIT_SIZE);
 
     // Results:
     printf("code length = %d\n"
@@ -116,12 +118,12 @@ int main() {
            (float)(sizeof(tree) + sizeof(code)) * 100 / (INPUT_SIZE + 1));
     // Print the code (on test version)
     for (unsigned int i = 0; i < code_len / sizeof(int); ++i) {
-        for (int j = sizeof(int) * 8 - 1; j >= 0; --j) {
+        for (int j = INT_BIT_SIZE - 1; j >= 0; --j) {
             printf("%c", (BIT_READ(code[i], j) != 0) ? '1' : '0');
         }
     }
     for (unsigned int i = 0; i < last_cell_bit; ++i) {
-        printf("%c", (BIT_READ(code[last_cell], sizeof(int) * 8 - 1 - i) != 0)
+        printf("%c", (BIT_READ(code[last_cell], INT_BIT_SIZE - 1 - i) != 0)
                          ? '1'
                          : '0');
     }
@@ -355,8 +357,8 @@ unsigned int encode_input(Node *tree, unsigned int tree_size,
     for (unsigned int i = 0; i < INPUT_SIZE; ++i) {
         piece = encode(tree_size, tree, input[i], &piece_len);
         // If the next chunk overlaps between two cells, cut it in two
-        if (curr_cell_bit + piece_len > 8 * sizeof(int)) {
-            first_fragment_len = 8 * sizeof(int) - curr_cell_bit;
+        if (curr_cell_bit + piece_len > INT_BIT_SIZE) {
+            first_fragment_len = INT_BIT_SIZE - curr_cell_bit;
             code[curr_cell] = (code[curr_cell] << first_fragment_len) |
                               (piece >> (piece_len - first_fragment_len));
             code_len += first_fragment_len;
@@ -364,7 +366,7 @@ unsigned int encode_input(Node *tree, unsigned int tree_size,
             piece &= ((1 << piece_len) - 1);
             curr_cell_bit += first_fragment_len;
         }
-        if (curr_cell_bit == sizeof(int) * 8) {
+        if (curr_cell_bit == INT_BIT_SIZE) {
             ++curr_cell;
             curr_cell_bit = 0;
             code[curr_cell] = 0;
@@ -375,7 +377,7 @@ unsigned int encode_input(Node *tree, unsigned int tree_size,
         piece_len = 0;
     }
     // Align to the left
-    code[curr_cell] <<= (sizeof(int) * 8 - curr_cell_bit);
+    code[curr_cell] <<= (INT_BIT_SIZE - curr_cell_bit);
     return code_len;
 }
 
@@ -384,7 +386,7 @@ char decode(unsigned int size, Node *tree, unsigned int input,
     // Input goes from MSB to LSB
     Node node = tree[size - 1];
     unsigned int index;
-    unsigned int MSB = sizeof(int) * 8 - 1;
+    unsigned int MSB = INT_BIT_SIZE - 1;
     do {
         if (BIT_READ(input, MSB) != 0) {
             node = tree[node.right];
@@ -407,7 +409,7 @@ char decode(unsigned int size, Node *tree, unsigned int input,
     } else {
         bit = __builtin_ctz(node.symbol[index]);
     }
-    char ch = bit + sizeof(int) * 8 * index + ' ';
+    char ch = bit + INT_BIT_SIZE * index + ' ';
     return ch;
 }
 
@@ -425,21 +427,21 @@ void decode_code(unsigned int *code, unsigned int code_len, Node *tree,
         output[next_ch_index++] =
             decode(tree_size, tree, input_chunk, &piece_len);
         to_decode -= piece_len;
-        if (next_cell_bit + piece_len > sizeof(int) * 8) {
-            first_fragment_len = sizeof(int) * 8 - next_cell_bit;
+        if (next_cell_bit + piece_len > INT_BIT_SIZE) {
+            first_fragment_len = INT_BIT_SIZE - next_cell_bit;
             input_chunk = (input_chunk << first_fragment_len) |
                           (code[next_cell] << next_cell_bit >>
-                           (sizeof(int) * 8 - first_fragment_len));
-            next_cell_bit = sizeof(int) * 8;
+                           (INT_BIT_SIZE - first_fragment_len));
+            next_cell_bit = INT_BIT_SIZE;
             piece_len -= first_fragment_len;
         }
-        if (next_cell_bit == sizeof(int) * 8) {
+        if (next_cell_bit == INT_BIT_SIZE) {
             ++next_cell;
             next_cell_bit = 0;
         }
         input_chunk =
             (input_chunk << piece_len) |
-            (code[next_cell] << next_cell_bit >> (sizeof(int) * 8 - piece_len));
+            (code[next_cell] << next_cell_bit >> (INT_BIT_SIZE - piece_len));
         next_cell_bit += piece_len;
         piece_len = 0;
     }
@@ -448,11 +450,11 @@ void decode_code(unsigned int *code, unsigned int code_len, Node *tree,
 void print_symbol(unsigned int symbol[3]) {
     printf("\"");
     for (int i = 0; i < 3; ++i) {
-        for (unsigned int j = 0; j < sizeof(int) * 8; ++j) {
+        for (unsigned int j = 0; j < INT_BIT_SIZE; ++j) {
             if (i == 2 && j == 31)
                 break;
             if ((symbol[i] & (1 << j)) != 0) {
-                printf("%c", (char)(sizeof(int) * 8 * i + j) + ' ');
+                printf("%c", (char)(INT_BIT_SIZE * i + j) + ' ');
             }
         }
     }
