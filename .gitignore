@@ -35,7 +35,8 @@
 *.i*86
 *.x86_64
 *.hex
-real-time-compression
+huffman-compression
+huffman-compression-test
 
 # Debug files
 *.dSYM/
