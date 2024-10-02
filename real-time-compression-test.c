@@ -374,7 +374,7 @@ unsigned int encode_input(Node *tree, unsigned int tree_size,
         code_len += piece_len;
         piece_len = 0;
     }
-    // Align to right
+    // Align to the left
     code[curr_cell] <<= (sizeof(int) * 8 - curr_cell_bit);
     return code_len;
 }
