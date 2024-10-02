@@ -290,29 +290,33 @@ int encode(int size, Node *tree, char ch, int *len) {
     return code;
 }
 
-char decode(int size, Node *tree, int input, int *len) {
+char decode(int size, Node *tree, unsigned int input, unsigned int *len) {
+    // Input goes from MSB to LSB
     Node node = tree[size - 1];
-    int byte;
+    unsigned int index;
+    unsigned int MSB = sizeof(int) * 8 - 1;
     do {
-        if (BIT_READ(input, 1) != 0) {
+        if (BIT_READ(input, MSB) != 0) {
             node = tree[node.right];
         } else {
             node = tree[node.left];
         }
         ++(*len);
+        input <<= 1;
     } while (node.left != -1 && node.right != -1);
     for (unsigned int i = 0; i < SYMBOL_BYTE_LEN; ++i) {
         if (node.symbol[i] != 0) {
-            byte = i;
+            index = i;
             break;
         }
     }
     unsigned int bit;
-    if (node.symbol[byte] == 1) {
+    // ctz has UB if there is no trailing zero
+    if (node.symbol[index] == 1) {
         bit = 0;
     } else {
-        bit = __builtin_ctz(node.symbol[byte]);
+        bit = __builtin_ctz(node.symbol[index]);
     }
-    char ch = bit + sizeof(int) * 8 * byte;
+    char ch = bit + sizeof(int) * 8 * index + ' ';
     return ch;
 }
