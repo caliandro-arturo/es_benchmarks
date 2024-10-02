@@ -69,9 +69,7 @@ Node pop(int *size, Node *heap);
 // the merged node
 Node merge_nodes(Node *tree, int node_a, int node_b);
 // Insert a node in the tree, at the end of the tree
-void insert_in_tree(int *size, Node *tree, Node node);
-// Make the tree, once all the nodes have been inserted
-void sort_tree(int size, Node *tree); // TODO: maybe not necessary
+void insert_in_tree(unsigned int *size, Node *tree, Node *node);
 // Encode the character, and return in len the number of bits
 int encode(int size, Node *tree, char ch, int *len); // TODO
 // Decode until a character has been obtained, and return the amount of bits
@@ -264,13 +262,13 @@ Node merge_nodes(Node *tree, int node_a, int node_b) {
     return merge;
 }
 
-void insert_in_tree(int *size, Node *tree, Node node) {
-    if (node.inserted_at != -1) {
+void insert_in_tree(unsigned int *size, Node *tree, Node *node) {
+    if (node->inserted_at != -1) {
         // Already inserted
         return;
     }
-    tree[*size] = node;
-    node.inserted_at = *size;
+    node->inserted_at = *size;
+    tree[*size] = *node;
     ++(*size);
 }
 
