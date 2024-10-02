@@ -4,6 +4,7 @@
  * tree are used to implement the queue and the main structure of the coder.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -66,45 +67,75 @@ Node pop(unsigned int *size, Node *heap);
 
 // Tree
 
+void init_huffman_tree(Node *heap, unsigned int *heap_size, Node *tree,
+                       unsigned int *tree_size);
 // Merge the symbol of two nodes, given their position in the tree, and return
 // the merged node
 Node merge_nodes(Node *tree, unsigned int node_a, unsigned int node_b);
 // Insert a node in the tree, at the end of the tree
 void insert_in_tree(unsigned int *size, Node *tree, Node *node);
-// Encode the character, and return in len the number of bits
-unsigned int encode(unsigned int size, Node *tree, char ch, unsigned int *len);
-// Decode until a character has been obtained, and return the amount of bits
-// used to decode
-char decode(unsigned int size, Node *tree, unsigned int input, unsigned int *len);
+unsigned int encode_input(Node *tree, unsigned int tree_size,
+                          unsigned int *code);
+void decode_code(unsigned int *code, unsigned int code_len, Node *tree,
+                 unsigned int tree_size, char output[INPUT_SIZE + 1]);
+
+// Output
 
 void print_symbol(unsigned int symbol[3]);
+void print_tree(int size, Node *tree, Node root, int space);
 
 int main() {
     // Compress the input
     // Evaluate character statistics
-    int freq[CHAR_DOMAIN_LEN] = {0};
-    int total = compute_input_statistics(freq);
+    unsigned int freq[CHAR_DOMAIN_LEN] = {0};
+    // Total amount of unique characters
+    unsigned int total = compute_input_statistics(freq);
     Node priority_queue[total];
     init_heap(total, priority_queue, freq);
+    unsigned int heap_size = total;
+    // Make the tree
+    unsigned int tree_size = 0;
+    Node tree[2 * total - 1];
+    init_huffman_tree(priority_queue, &heap_size, tree, &tree_size);
+    assert(tree_size == 2 * total - 1);
+    // Encode the input
+    unsigned int huffman_code_space = ceilf(
+        (float)INPUT_SIZE / sizeof(int)); // The size of the code is not bigger
+                                          // than the size of the input.
+    unsigned int code[huffman_code_space];
+    unsigned int code_len = encode_input(tree, tree_size, code);
+    unsigned int last_cell = ceilf((float)code_len / (sizeof(int) * 8));
+    unsigned int last_cell_bit = code_len % (sizeof(int) * 8);
 
-    // TODO: implement actual Huffman coding:
-    // while(at least 2 nodes inside the queue/heap) {
-    //   pop two nodes from the queue;
-    //   merge them in a new node;
-    //   add the three nodes in the three, the merge one as the parent;
-    //   insert the merge node into the heap;
-    // }
-    // sort the tree (hardest part imho);
+    // Results:
+    printf("code length = %d\n"
+           "input length = %d\n"
+           "compression ratio = %.2f%%\n"
+           "spatial ratio = %.2f%%\n",
+           code_len, INPUT_SIZE * 8, (float)code_len * 100 / (INPUT_SIZE * 8),
+           (float)(sizeof(tree) + sizeof(code)) * 100 / (INPUT_SIZE + 1));
+    // Print the code (on test version)
+    for (unsigned int i = 0; i < code_len / sizeof(int); ++i) {
+        for (int j = sizeof(int) * 8 - 1; j >= 0; --j) {
+            printf("%c", (BIT_READ(code[i], j) != 0) ? '1' : '0');
+        }
+    }
+    for (unsigned int i = 0; i < last_cell_bit; ++i) {
+        printf("%c", (BIT_READ(code[last_cell], sizeof(int) * 8 - 1 - i) != 0)
+                         ? '1'
+                         : '0');
+    }
+    // Print tree
+    print_tree(tree_size, tree, tree[tree_size - 1], 0);
+    printf("\n\n");
 
-    // The size of the code is not bigger than the size of the input.
-    int huffman_code_space = ceilf((float)INPUT_SIZE / sizeof(int));
-    unsigned int code[huffman_code_space]; // The code is expressed bit-wise
-    int code_len = 0;
-    // TODO:
-    // Encode the string as bits in the variable "code";
-    // Print the output (on test version);
-    // Decode the string;
-    // Ensure that the decoding matches with the original string;
+    // Ensure that the decoded string matches with the original one
+    char decoded[INPUT_SIZE + 1];
+    decoded[INPUT_SIZE] = '\0';
+    decode_code(code, code_len, tree, tree_size, decoded);
+    for (unsigned int i = 0; i < INPUT_SIZE; ++i) {
+        assert(input[i] == decoded[i]);
+    }
     return 0;
 }
 
@@ -253,6 +284,25 @@ Node pop(unsigned int *size, Node *heap) {
     return to_extract;
 }
 
+// TREE
+
+void init_huffman_tree(Node *heap, unsigned int *heap_size, Node *tree,
+                       unsigned int *tree_size) {
+    while (*heap_size > 1) {
+        Node a = pop(heap_size, heap);
+        if (a.inserted_at == -1) {
+            insert_in_tree(tree_size, tree, &a);
+        }
+        Node b = pop(heap_size, heap);
+        if (b.inserted_at == -1) {
+            insert_in_tree(tree_size, tree, &b);
+        }
+        Node merge = merge_nodes(tree, a.inserted_at, b.inserted_at);
+        insert_in_tree(tree_size, tree, &merge);
+        insert_in_heap(heap_size, heap, merge);
+    }
+}
+
 Node merge_nodes(Node *tree, unsigned int node_a, unsigned int node_b) {
     Node a = tree[node_a];
     Node b = tree[node_b];
@@ -294,7 +344,43 @@ unsigned int encode(unsigned int size, Node *tree, char ch, unsigned int *len) {
     return code;
 }
 
-char decode(int size, Node *tree, unsigned int input, unsigned int *len) {
+unsigned int encode_input(Node *tree, unsigned int tree_size,
+                          unsigned int *code) {
+    unsigned int code_len = 0;
+    unsigned int curr_cell = 0, curr_cell_bit = 0;
+    // Used to store single encoded characters
+    unsigned int piece, piece_len = 0;
+    // If information is fragmented, use these
+    unsigned int first_fragment_len;
+    for (unsigned int i = 0; i < INPUT_SIZE; ++i) {
+        piece = encode(tree_size, tree, input[i], &piece_len);
+        // If the next chunk overlaps between two cells, cut it in two
+        if (curr_cell_bit + piece_len > 8 * sizeof(int)) {
+            first_fragment_len = 8 * sizeof(int) - curr_cell_bit;
+            code[curr_cell] = (code[curr_cell] << first_fragment_len) |
+                              (piece >> (piece_len - first_fragment_len));
+            code_len += first_fragment_len;
+            piece_len -= first_fragment_len;
+            piece &= ((1 << piece_len) - 1);
+            curr_cell_bit += first_fragment_len;
+        }
+        if (curr_cell_bit == sizeof(int) * 8) {
+            ++curr_cell;
+            curr_cell_bit = 0;
+            code[curr_cell] = 0;
+        }
+        code[curr_cell] = (code[curr_cell] << piece_len) | piece;
+        curr_cell_bit += piece_len;
+        code_len += piece_len;
+        piece_len = 0;
+    }
+    // Align to right
+    code[curr_cell] <<= (sizeof(int) * 8 - curr_cell_bit);
+    return code_len;
+}
+
+char decode(unsigned int size, Node *tree, unsigned int input,
+            unsigned int *len) {
     // Input goes from MSB to LSB
     Node node = tree[size - 1];
     unsigned int index;
@@ -323,4 +409,73 @@ char decode(int size, Node *tree, unsigned int input, unsigned int *len) {
     }
     char ch = bit + sizeof(int) * 8 * index + ' ';
     return ch;
+}
+
+void decode_code(unsigned int *code, unsigned int code_len, Node *tree,
+                 unsigned int tree_size, char output[INPUT_SIZE + 1]) {
+    unsigned int next_ch_index = 0;
+    unsigned int to_decode = code_len;
+    unsigned int first_fragment_len;
+    unsigned int next_cell = 1;
+    unsigned int next_cell_bit = 0;
+    unsigned int piece_len = 0;
+    unsigned int input_chunk = code[0];
+    while (to_decode > 0) {
+        // Assuming that each symbol is not going to take more than 4 bytes
+        output[next_ch_index++] =
+            decode(tree_size, tree, input_chunk, &piece_len);
+        to_decode -= piece_len;
+        if (next_cell_bit + piece_len > sizeof(int) * 8) {
+            first_fragment_len = sizeof(int) * 8 - next_cell_bit;
+            input_chunk = (input_chunk << first_fragment_len) |
+                          (code[next_cell] << next_cell_bit >>
+                           (sizeof(int) * 8 - first_fragment_len));
+            next_cell_bit = sizeof(int) * 8;
+            piece_len -= first_fragment_len;
+        }
+        if (next_cell_bit == sizeof(int) * 8) {
+            ++next_cell;
+            next_cell_bit = 0;
+        }
+        input_chunk =
+            (input_chunk << piece_len) |
+            (code[next_cell] << next_cell_bit >> (sizeof(int) * 8 - piece_len));
+        next_cell_bit += piece_len;
+        piece_len = 0;
+    }
+}
+
+void print_symbol(unsigned int symbol[3]) {
+    printf("\"");
+    for (int i = 0; i < 3; ++i) {
+        for (unsigned int j = 0; j < sizeof(int) * 8; ++j) {
+            if (i == 2 && j == 31)
+                break;
+            if ((symbol[i] & (1 << j)) != 0) {
+                printf("%c", (char)(sizeof(int) * 8 * i + j) + ' ');
+            }
+        }
+    }
+    printf("\"");
+}
+
+void print_tree(int size, Node *tree, Node root, int space) {
+    // Increase distance between levels
+    space += 15;
+
+    // Process right child first
+    if (root.right != -1)
+        print_tree(size, tree, tree[root.right], space);
+
+    // Print current node after space
+    // count
+    printf("\n");
+    for (int i = 15; i < space; i++)
+        printf(" ");
+    print_symbol(root.symbol);
+
+    // Process left child
+    if (root.left != -1) {
+        print_tree(size, tree, tree[root.left], space);
+    }
 }
