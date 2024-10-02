@@ -52,29 +52,30 @@ typedef struct {
     int inserted_at;
 } Node;
 
-int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]);
+unsigned int compute_input_statistics(unsigned int freq[CHAR_DOMAIN_LEN]);
 
 // Heap
 
 // Initialize the heap
-void init_heap(int size, Node heap[size], int freq[CHAR_DOMAIN_LEN]);
+void init_heap(unsigned int size, Node heap[size],
+               unsigned int freq[CHAR_DOMAIN_LEN]);
 // Insert a node in the heap
-void insert_in_heap(int *size, Node *heap, Node node);
+void insert_in_heap(unsigned int *size, Node *heap, Node node);
 // Pop a node out of the heap
-Node pop(int *size, Node *heap);
+Node pop(unsigned int *size, Node *heap);
 
 // Tree
 
 // Merge the symbol of two nodes, given their position in the tree, and return
 // the merged node
-Node merge_nodes(Node *tree, int node_a, int node_b);
+Node merge_nodes(Node *tree, unsigned int node_a, unsigned int node_b);
 // Insert a node in the tree, at the end of the tree
 void insert_in_tree(unsigned int *size, Node *tree, Node *node);
 // Encode the character, and return in len the number of bits
-int encode(int size, Node *tree, char ch, int *len); // TODO
+unsigned int encode(unsigned int size, Node *tree, char ch, unsigned int *len);
 // Decode until a character has been obtained, and return the amount of bits
 // used to decode
-char decode(int size, Node *tree, int input, int *len); // TODO
+char decode(unsigned int size, Node *tree, unsigned int input, unsigned int *len);
 
 void print_symbol(unsigned int symbol[3]);
 
@@ -114,7 +115,7 @@ int main() {
  * @param freq the array to use as histogram
  * @return int: the amount of unique characters
  */
-int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]) {
+unsigned int compute_input_statistics(unsigned int freq[CHAR_DOMAIN_LEN]) {
     int total = 0;
     int next_char;
     for (unsigned int i = 0; i < INPUT_SIZE; ++i) {
@@ -134,7 +135,7 @@ int compute_input_statistics(int freq[CHAR_DOMAIN_LEN]) {
  * @param pos the position of the child
  * @return int: the position of the parent
  */
-int parent(int pos) { return (pos - 1) / 2; }
+unsigned int parent(unsigned int pos) { return (pos - 1) / 2; }
 
 /**
  * @brief Left child of the node. No check against its actual existence is
@@ -143,7 +144,7 @@ int parent(int pos) { return (pos - 1) / 2; }
  * @param pos the position of the parent
  * @return int: the position of the left child
  */
-int left(int pos) { return 2 * pos + 1; }
+unsigned int left(int pos) { return 2 * pos + 1; }
 
 /**
  * @brief Right child of the node. No check against its actual existence is
@@ -152,7 +153,7 @@ int left(int pos) { return 2 * pos + 1; }
  * @param pos the position of the parent
  * @return int: the position of the right child
  */
-int right(int pos) { return 2 * pos + 2; }
+unsigned int right(int pos) { return 2 * pos + 2; }
 
 void swap(Node *a, Node *b) {
     Node t = *a;
@@ -160,9 +161,9 @@ void swap(Node *a, Node *b) {
     *b = t;
 }
 
-void heapify(int size, Node heap[size]) {
-    int start = size >> 1;
-    int root, child;
+void heapify(unsigned int size, Node heap[size]) {
+    unsigned int start = size >> 1;
+    unsigned int root, child;
     while (start > 0) {
         --start;
         // Sift down (start, end)
@@ -192,9 +193,10 @@ void heapify(int size, Node heap[size]) {
  * @param heap the heap
  * @param freq the reference histogram
  */
-void init_heap(int size, Node heap[size], int freq[CHAR_DOMAIN_LEN]) {
-    int cur = 0;
-    for (int i = 0; i < CHAR_DOMAIN_LEN && cur < size; ++i) {
+void init_heap(unsigned int size, Node heap[size],
+               unsigned int freq[CHAR_DOMAIN_LEN]) {
+    unsigned int cur = 0;
+    for (unsigned int i = 0; i < CHAR_DOMAIN_LEN && cur < size; ++i) {
         if (freq[i] > 0) {
             // Make node:
             // 1. Set the symbol bitmap to 0
@@ -218,7 +220,7 @@ void init_heap(int size, Node heap[size], int freq[CHAR_DOMAIN_LEN]) {
     // if cur != size, there should be an error somewhere
 }
 
-void insert_in_heap(int *size, Node *heap, Node node) {
+void insert_in_heap(unsigned int *size, Node *heap, Node node) {
     // Inserts occurr always after two pops, so out-of-bound checks should
     // never be necessary.
     heap[*size] = node;
@@ -230,7 +232,7 @@ void insert_in_heap(int *size, Node *heap, Node node) {
     ++(*size);
 }
 
-Node pop(int *size, Node *heap) {
+Node pop(unsigned int *size, Node *heap) {
     Node to_extract = heap[0];
     --(*size);
     heap[0] = heap[*size];
@@ -251,7 +253,7 @@ Node pop(int *size, Node *heap) {
     return to_extract;
 }
 
-Node merge_nodes(Node *tree, int node_a, int node_b) {
+Node merge_nodes(Node *tree, unsigned int node_a, unsigned int node_b) {
     Node a = tree[node_a];
     Node b = tree[node_b];
     Node merge = {.left = node_a,
@@ -274,7 +276,7 @@ void insert_in_tree(unsigned int *size, Node *tree, Node *node) {
     ++(*size);
 }
 
-unsigned int encode(int size, Node *tree, char ch, unsigned int *len) {
+unsigned int encode(unsigned int size, Node *tree, char ch, unsigned int *len) {
     unsigned int ch_byte = CHAR_MAP_INDEX(ch);
     unsigned int ch_bit = CHAR_BIT_INDEX(ch);
     unsigned int code = 0;
