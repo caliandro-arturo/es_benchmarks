@@ -12,8 +12,8 @@ test:
 	for file in *; do \
 		echo Compiling Test/"$$file"... ; \
 		cc -o ../Test-build/$${file%.*} "$$file" ; \
-	done; \
+	done;
 
 clean:
 	pio run --target clean
-	rm -rf Test-build/*)
+	rm -rf Test-build/*
