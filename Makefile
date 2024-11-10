@@ -1,19 +1,17 @@
-flash:
-	pio run --target upload
+CC = gcc
+CFLAGS = -std=c11
 
-.PHONY: test
-test:
-	@mkdir -p Test-build; \
-	cd Test; \
-	if [ $$(ls -1 | wc -l) -eq 0 ]; then \
-		echo "Nothing to compile."; \
-		exit; \
-	fi; \
-	for file in *; do \
-		echo Compiling Test/"$$file"... ; \
-		cc -o ../Test-build/$${file%.*} "$$file" ; \
-	done;
+SRCDIR := Test
+SRCS = $(wildcard $(SRCDIR)/*.c)
+OBJS = $(patsubst $(SRCDIR)/%.c, $(BUILDDIR)/%.o, $(SRCS))
+BUILDDIR = Test-build
+
+$(OBJS:.o=): $(OBJS)
+	$(CC) -o $@ $^
+
+$(OBJS): $(SRCS)
+	test -d $(BUILDDIR) || mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	pio run --target clean
-	rm -rf Test-build/*
+	rm -rf $(BUILDDIR)
