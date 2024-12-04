@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include "visualizer.h"
 #include "pwm-fan-speed.h"
+#include "huffman-compression.h"
 #include "simple_random.h"
 /* USER CODE END Includes */
 
@@ -103,13 +104,20 @@ int main(void) {
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   // Set random seed
   random_set_seed(42);
+  uint32_t iters = 100;
 
   // Visualizer
-  total_ms = bench(visualizer, VIS_INPUT_SIZE, 100, 100);
-  printf("Visualizer, %d iterations: %.4f ms\r\n", 100, total_ms);
+  total_ms = bench(visualizer, VIS_INPUT_SIZE, iters, 100);
+  printf("Visualizer, %d iterations: %.4f ms\r\n", iters, total_ms);
   // Pwm-fan-speed
-  total_ms = bench(pwm_fan_speed, PWM_INPUT_SIZE, 100, 5);
-  printf("Pwm-fan-speed, %d iterations: %.4f ms\r\n", 100, total_ms);
+  total_ms = bench(pwm_fan_speed, PWM_INPUT_SIZE, iters, 5);
+  printf("Pwm fan speed controller, %d iterations: %.4f ms\r\n", iters,
+      total_ms);
+  // Huffman compression
+  total_ms = bench_int(huffman_compression, HUFFMAN_INPUT_SIZE, iters, 95,
+      32);
+  printf("Huffman compression, %d iterations: %.4f ms\r\n", iters,
+      total_ms);
 
   /* USER CODE END 2 */
 
@@ -174,7 +182,7 @@ void SystemClock_Config(void) {
  * @param input_len: the length of the input for the benchmark
  * @param iter: the number of iterations: each iteration will have different input
  * @param rescale: a parameter to rescale the input (which is in the range U[0,1)
- * @return the duration of the benchmark, in ms
+ * @return double: the duration of the benchmark, in ms
  */
 double bench(void (*benchmark)(double*), uint32_t input_len,
     uint32_t iter, uint32_t rescale) {
