@@ -55,7 +55,7 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 
-double bench_visualizer(uint32_t iter);
+double bench_visualizer(uint32_t iter, uint32_t rescale);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -96,7 +96,7 @@ int main(void) {
 
   // Set random seed
   random_set_seed(42);
-  total_ms = bench_visualizer(100);
+  total_ms = bench_visualizer(100, 100);
 
   // Print result
   printf("Visualizer, %d iterations: %.4f ms\r\n", 100, total_ms);
@@ -160,19 +160,24 @@ void SystemClock_Config(void) {
  * @brief Runs the visualizer benchmark.
  *
  * @param iter the number of iterations: each iteration will have different input
+ * @param rescale a parameter to rescale the input (which is in the range U[0,1)
  * @return the duration of the benchmark
  */
-double bench_visualizer(uint32_t iter) {
+double bench_visualizer(uint32_t iter, uint32_t rescale) {
   double input[VIS_INPUT_SIZE];
   double total_cycles = 0;
   for (int i = 0; i < iter; ++i) {
     // Randomize array
     random_get_array(input, VIS_INPUT_SIZE);
+    // Optionally, rescale the input
+    for (int i = 0; i < VIS_INPUT_SIZE; ++i) {
+      input[i] *= rescale;
+    }
     // Reset the system counter to avoid overflows
     DWT->CYCCNT = 0;
     // Run the bench
     visualizer(input);
-    // Get the
+    // Get the total number of cycles
     total_cycles += (DWT->CYCCNT);
   }
   // Convert from cycles to milliseconds
