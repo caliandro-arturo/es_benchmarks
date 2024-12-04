@@ -55,7 +55,8 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 
-double bench_visualizer(uint32_t iter, uint32_t rescale);
+double bench(void (*benchmark)(double*), uint32_t input_len,
+    uint32_t iter, uint32_t rescale);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,13 +96,13 @@ int main(void) {
   /* USER CODE BEGIN 2 */
 
   // Enable the counter
-  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk  ;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   // Set random seed
   random_set_seed(42);
-  total_ms = bench_visualizer(100, 100);
 
-  // Print result
+  // Visualizer
+  total_ms = bench(visualizer, VIS_INPUT_SIZE, 100, 100);
   printf("Visualizer, %d iterations: %.4f ms\r\n", 100, total_ms);
   /* USER CODE END 2 */
 
@@ -160,26 +161,29 @@ void SystemClock_Config(void) {
 /* USER CODE BEGIN 4 */
 
 /**
- * @brief Runs the visualizer benchmark.
+ * @brief Runs the given benchmark.
  *
- * @param iter the number of iterations: each iteration will have different input
- * @param rescale a parameter to rescale the input (which is in the range U[0,1)
- * @return the duration of the benchmark
+ * @param benchmark: the main benchmark function
+ * @param input_len: the length of the input for the benchmark
+ * @param iter: the number of iterations: each iteration will have different input
+ * @param rescale: a parameter to rescale the input (which is in the range U[0,1)
+ * @return the duration of the benchmark, in ms
  */
-double bench_visualizer(uint32_t iter, uint32_t rescale) {
-  double input[VIS_INPUT_SIZE];
+double bench(void (*benchmark)(double*), uint32_t input_len,
+    uint32_t iter, uint32_t rescale) {
+  double input[input_len];
   double total_cycles = 0;
   for (int i = 0; i < iter; ++i) {
     // Randomize array
-    random_get_array(input, VIS_INPUT_SIZE);
+    random_get_array(input, input_len);
     // Optionally, rescale the input
-    for (int i = 0; i < VIS_INPUT_SIZE; ++i) {
+    for (int i = 0; i < input_len; ++i) {
       input[i] *= rescale;
     }
     // Reset the system counter to avoid overflows
     DWT->CYCCNT = 0;
     // Run the bench
-    visualizer(input);
+    benchmark(input);
     // Get the total number of cycles
     total_cycles += (DWT->CYCCNT);
   }
