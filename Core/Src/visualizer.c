@@ -5,8 +5,8 @@
  * The input is read and then drawn as a graph using the Bresenham algorithm.
  */
 
-#include <visualizer.h>
 #include <math.h>
+#include "visualizer.h"
 
 typedef struct {
     int x_factor;    // The scaling factor for the x axis

@@ -16,29 +16,7 @@
  */
 
 #include <math.h>
-
-#define INPUT_SIZE 100
-double input[INPUT_SIZE] = {
-    5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
-    5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
-    5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, .0,  .0,  .0,  .0,  .0,
-    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,
-    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,
-    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,
-    .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0,  .0}; // [J]
-#define TEMP_TH 50                                    // [°C]
-#define AIRFLOW 0.07                                  // [m^3/s]
-#define DT 1                                          // [s]
-
-// PID controller values
-float Kp = 1;
-float Ki = 1;
-float Kd = 0;
-
-// An aluminium square
-#define SURFACE_AREA 0.01  // [m^2]
-#define CHARACT_LEN 0.1    // [m] (length of the surface)
-#define ALUMINIUM_CP 0.897 // [J/(Kg*K)]
+#include "pwm-fan-speed.h"
 
 // Air constants
 #define AIR_CP 1.012                  // [J/(Kg*K)]
@@ -48,10 +26,6 @@ float Kd = 0;
 #define AIR_THERMAL_DIFF_COEFF 1.9E-5 // [m^2/s]
 #define AIR_DENSITY 1.1839            // [kg/m^3] at 25°C
 #define AIR_Pr 0.71                   // Air Prandtl number
-
-// Fan constants
-#define FAN_AREA 0.0113  // [m^2] circular area of a 12x12cm fan
-#define FAN_DISTANCE 0.1 // [m] distance of the fan from the surface
 
 // General constants
 #define g 9.81    // [m/s^2]
@@ -79,13 +53,13 @@ double evaluate_new_dc(status_t *status, double th);
 double grashof(double temp);
 double reynolds(fan_t fan, double temp);
 
-int main() {
-    const double temp_th = TEMP_TH;
-    double airflow = AIRFLOW;
+void pwm_fan_speed(double input[PWM_INPUT_SIZE]) {
+    const double temp_th = PWM_TEMP_TH;
+    double airflow = PWM_AIRFLOW;
     fan_t fan = {airflow / FAN_AREA, 0.0};
     status_t status = {AMBIENT_TEMP, AMBIENT_TEMP, 0, 0};
     double heat_diff, temp_delta, cooling, richardson;
-    for (int i = 0; i < INPUT_SIZE; ++i) {
+    for (int i = 0; i < PWM_INPUT_SIZE; ++i) {
         // Temperature increment
         heat_diff = input[i];
         temp_delta = evaluate_temperature_increment(heat_diff);
@@ -108,7 +82,6 @@ int main() {
         // Evaluate new duty cycle
         fan.DC = evaluate_new_dc(&status, temp_th);
     }
-    return 0;
 }
 
 /**
@@ -122,11 +95,11 @@ double evaluate_new_dc(status_t *status, double th) {
     double err = status->expected_temp - th;
     // Clipping to values above 0 since temperatures below the threshold
     // are ok
-    double derivative = fmax((err - status->__prev_err) / DT, 0);
-    status->__integral = fmax(status->__integral + err * DT, 0);
+    double derivative = fmax((err - status->__prev_err) / PWM_DT, 0);
+    status->__integral = fmax(status->__integral + err * PWM_DT, 0);
     status->__prev_err = err;
     double dc =
-        (Kp * err + Ki * (status->__integral) + Kd * derivative) / 100.0;
+        (PWM_Kp * err + PWM_Ki * (status->__integral) + PWM_Kd * derivative) / 100.0;
     if (dc > 1.0)
         dc = 1.0;
     else if (dc < 0.0)
@@ -141,7 +114,7 @@ double evaluate_new_dc(status_t *status, double th) {
  * @return double: the temperature delta
  */
 double evaluate_temperature_increment(double heat_diff) {
-    return (heat_diff / ALUMINIUM_CP) * DT;
+    return (heat_diff / ALUMINIUM_CP) * PWM_DT;
 }
 
 /**
