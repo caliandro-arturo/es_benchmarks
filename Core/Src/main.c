@@ -94,6 +94,9 @@ int main(void) {
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  // Enable the counter
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk  ;
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   // Set random seed
   random_set_seed(42);
   total_ms = bench_visualizer(100, 100);
