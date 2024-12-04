@@ -58,6 +58,8 @@ void SystemClock_Config(void);
 
 double bench(void (*benchmark)(double*), uint32_t input_len,
     uint32_t iter, uint32_t rescale);
+double bench_int(void (*benchmark)(unsigned int*), uint32_t input_len,
+    uint32_t iter, uint32_t rescale_mod, int32_t rescale_offset);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -189,6 +191,41 @@ double bench(void (*benchmark)(double*), uint32_t input_len,
     DWT->CYCCNT = 0;
     // Run the bench
     benchmark(input);
+    // Get the total number of cycles
+    total_cycles += (DWT->CYCCNT);
+  }
+  // Convert from cycles to milliseconds
+  return (total_cycles * 1000.0 / HAL_RCC_GetSysClockFreq());
+}
+
+/**
+ * @brief Runs the given benchmark, with integer inputs.
+ *        A rescaling on the input is done as follows:
+ *          input[i] = input[i] % rescale_mod + rescale_offset
+ *        thus allowing for arbitrary integer values.
+ *
+ * @param benchmark: the main benchmark function
+ * @param input_len: the length of the input for the benchmark
+ * @param iter: the number of iterations: each iteration will have different input
+ * @param rescale_mod: the range of integer values (from 0 to rescale_mod-1)
+ * @param rescale_offset: the range offset (to sum to each input value)
+ * @return double: the duration of the benchmark, in ms
+ */
+double bench_int(void (*benchmark)(unsigned int*), uint32_t input_len,
+    uint32_t iter, uint32_t rescale_mod, int32_t rescale_offset) {
+  uint32_t input[input_len];
+  double total_cycles = 0;
+  for (int i = 0; i < iter; ++i) {
+    // Randomize array
+    random_get_iarray(input, input_len);
+    // Optionally, rescale the input
+    for (int i = 0; i < input_len; ++i) {
+      input[i] = input[i] % rescale_mod + rescale_offset;
+    }
+    // Reset the system counter to avoid overflows
+    DWT->CYCCNT = 0;
+    // Run the bench
+    benchmark((unsigned int*)input);
     // Get the total number of cycles
     total_cycles += (DWT->CYCCNT);
   }
