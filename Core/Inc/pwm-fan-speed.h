@@ -1,9 +1,6 @@
 #ifndef PWM_H
 #define PWM_H
 
-#ifndef PWM_DEFINES
-#define PWM_DEFINES
-
 #define PWM_INPUT_SIZE 100
 // Fan parameters
 #define PWM_TEMP_TH 50    // [°C]
@@ -20,8 +17,6 @@
 #define SURFACE_AREA 0.01  // [m^2]
 #define CHARACT_LEN 0.1    // [m] (length of the surface)
 #define ALUMINIUM_CP 0.897 // [J/(Kg*K)]
-
-#endif
 
 void pwm_fan_speed(double input[PWM_INPUT_SIZE]);
 
