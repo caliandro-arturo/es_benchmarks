@@ -5,6 +5,7 @@
  * The input is read and then drawn as a graph using the Bresenham algorithm.
  */
 
+#include <visualizer.h>
 #include <math.h>
 
 typedef struct {
@@ -14,15 +15,6 @@ typedef struct {
 } image_data;
 
 image_data im_data;
-
-#ifndef VIS_DEFINES
-#define VIS_DEFINES
-
-#define VIS_WIDTH 300
-#define VIS_HEIGHT 200
-#define VIS_INPUT_SIZE 100
-
-#endif
 
 
 void get_values(double input[VIS_INPUT_SIZE], int n, double *min, double *max);

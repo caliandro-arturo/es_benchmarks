@@ -3,7 +3,7 @@
 
 #ifndef VIS_DEFINES
 #define VIS_DEFINES
-// Used to expose defines to main: values should be changed in visualizer.c too
+
 #define VIS_WIDTH 300
 #define VIS_HEIGHT 200
 #define VIS_INPUT_SIZE 100
