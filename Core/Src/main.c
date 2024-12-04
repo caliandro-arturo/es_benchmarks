@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "visualizer.h"
+#include "pwm-fan-speed.h"
 #include "simple_random.h"
 /* USER CODE END Includes */
 
@@ -104,6 +105,10 @@ int main(void) {
   // Visualizer
   total_ms = bench(visualizer, VIS_INPUT_SIZE, 100, 100);
   printf("Visualizer, %d iterations: %.4f ms\r\n", 100, total_ms);
+  // Pwm-fan-speed
+  total_ms = bench(pwm_fan_speed, PWM_INPUT_SIZE, 100, 5);
+  printf("Pwm-fan-speed, %d iterations: %.4f ms\r\n", 100, total_ms);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
