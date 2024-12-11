@@ -108,15 +108,15 @@ int main(void) {
 
   // Visualizer
   total_ms = bench(visualizer, VIS_INPUT_SIZE, iters, 100);
-  printf("Visualizer, %d iterations: %.4f ms\r\n", iters, total_ms);
+  printf("Visualizer, %lu iterations: %.4f ms\r\n", iters, total_ms);
   // Pwm-fan-speed
   total_ms = bench(pwm_fan_speed, PWM_INPUT_SIZE, iters, 5);
-  printf("Pwm fan speed controller, %d iterations: %.4f ms\r\n", iters,
+  printf("Pwm fan speed controller, %lu iterations: %.4f ms\r\n", iters,
       total_ms);
   // Huffman compression
   total_ms = bench_int(huffman_compression, HUFFMAN_INPUT_SIZE, iters, 95,
       32);
-  printf("Huffman compression, %d iterations: %.4f ms\r\n", iters,
+  printf("Huffman compression, %lu iterations: %.4f ms\r\n", iters,
       total_ms);
 
   /* USER CODE END 2 */
