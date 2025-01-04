@@ -1,7 +1,4 @@
-#include <stdio.h>
-
-#define WIDTH 5  // Larghezza della mappa
-#define HEIGHT 5 // Altezza della mappa
+#include "pathfind.h"
 
 typedef struct
 {
@@ -15,49 +12,9 @@ typedef struct
     Point parent;
 } Node;
 
-// Mappa percorso obbligato
-int map[HEIGHT][WIDTH] = {
-    {0, 0, 0, 1, 0},
-    {0, 1, 0, 1, 0},
-    {0, 1, 0, 1, 0},
-    {0, 1, 1, 0, 0},
-    {0, 0, 0, 0, 1}};
-
-Point start = {2, 2}; // Punto di partenza
-Point goal = {4, 0};  // Punto di arrivo
-
-/* // Mappa percorso chiuso
-int map[HEIGHT][WIDTH] = {
-    {1, 0, 0, 0, 0},
-    {0, 1, 0, 0, 0},
-    {0, 0, 1, 0, 0},
-    {0, 0, 0, 1, 0},
-    {0, 0, 0, 0, 1}};
-
-Point start = {1, 4}; // Punto di partenza
-Point goal = {3, 1};  // Punto di arrivo */
-
-/* // Mappa doppio percorso
-int map[HEIGHT][WIDTH] = {
-    {0, 0, 0, 0, 0},
-    {0, 1, 1, 1, 0},
-    {0, 1, 1, 1, 0},
-    {0, 1, 1, 1, 0},
-    {0, 0, 0, 0, 0}};
-
-Point start = {0, 4}; // Punto di partenza
-Point goal = {2, 0};  // Punto di arrivo */
-
-/* // Mappa errore
-int map[HEIGHT][WIDTH] = {
-    {0, 0, 0, 1, 0},
-    {0, 1, 0, 1, 0},
-    {0, 1, 0, 1, 0},
-    {0, 1, 1, 0, 0},
-    {0, 0, 0, 0, 1}};
-
-Point start = {1, 1}; // Punto di partenza
-Point goal = {0, 4};  // Punto di arrivo */
+int map[HEIGHT][WIDTH];
+Point start;
+Point goal;
 
 // Liste chiuse e aperte
 int closedList[HEIGHT][WIDTH] = {0}; // Lista chiusa
@@ -154,7 +111,6 @@ void aStar(Point start, Point goal)
 
         if (isEqual(currentNode.point, goal))
         {
-            printf("Percorso trovato!\n");
             Node pathNode = currentNode;
 
             // Ricostruisce il percorso risalendo i genitori
@@ -166,11 +122,6 @@ void aStar(Point start, Point goal)
             // Aggiunge il nodo di partenza al percorso
             path[pathLength++] = startNode.point;
 
-            // Stampa il percorso dall'inizio alla fine
-            for (int i = pathLength - 1; i >= 0; i--)
-            {
-                printf("(%d, %d)\n", path[i].x, path[i].y);
-            }
             return;
         }
 
@@ -196,23 +147,33 @@ void aStar(Point start, Point goal)
             }
         }
     }
-
-    printf("Nessun percorso trovato.\n");
 }
 
-int main()
+void pathfind(unsigned int input[PATHFIND_INPUT_SIZE])
 {
-    if (!isValid(start) || isObstacle(start))
+    start.x = input[0];
+    start.y = input[1];
+    goal.x = input[2];
+    goal.y = input[3];
+
+    int counter = 4;
+    for (int i = 0; i < HEIGHT; ++i)
     {
-        printf("Il punto di partenza non è valido o è un ostacolo.\n");
-        return 1;
+        for (int j = 0; j < WIDTH; ++j)
+        {
+            map[i][j] = input[counter];
+            ++counter;
+        }
     }
 
-    if (!isValid(goal) || isObstacle(goal))
-    {
-        printf("Il punto di arrivo non è valido o è un ostacolo.\n");
+    if (!isValid(start) || isObstacle(start))
         return 1;
-    }
+
+    if (!isValid(goal) || isObstacle(goal))
+        return 1;
+
+    if (start.x == goal.x && start.y == goal.y)
+        return 1;
 
     aStar(start, goal);
 
