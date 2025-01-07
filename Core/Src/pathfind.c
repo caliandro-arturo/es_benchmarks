@@ -167,15 +167,15 @@ void pathfind(unsigned int input[PATHFIND_INPUT_SIZE])
     }
 
     if (!isValid(start) || isObstacle(start))
-        return 1;
+        return;
 
     if (!isValid(goal) || isObstacle(goal))
-        return 1;
+        return;
 
     if (start.x == goal.x && start.y == goal.y)
-        return 1;
+        return;
 
     aStar(start, goal);
 
-    return 0;
+    return;
 }
