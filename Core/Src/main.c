@@ -123,7 +123,7 @@ int main(void)
   printf("Huffman compression, %lu iterations: %.4f ms\r\n", iters,
          total_ms);
   // Pathfind
-  total_ms = bench_int_pathfind(pathfind, PATHFIND_INPUT_SIZE, iters, 5);
+  total_ms = bench_int_pathfind(pathfind, PATHFIND_INPUT_SIZE, iters, HEIGHT);
   printf("Pathfind, %lu iterations: %.4f ms\r\n", iters,
          total_ms);
 
@@ -280,14 +280,14 @@ double bench_int_pathfind(void (*benchmark)(unsigned int *), uint32_t input_len,
     // Randomize array
     random_get_iarray(input, input_len);
     // Optionally, rescale the input
-    for (int i = 0; i < 4; ++i)
+    for (int j = 0; j < 4; ++j)
     {
-      input[i] = input[i] % rescale_mod;
+      input[j] = input[j] % rescale_mod;
     }
     rescale_mod = 2;
-    for (int i = 4; i < input_len; ++i)
+    for (int j = 4; j < input_len; ++j)
     {
-      input[i] = input[i] % rescale_mod;
+      input[j] = input[j] % rescale_mod;
     }
     // Reset the system counter to avoid overflows
     DWT->CYCCNT = 0;
