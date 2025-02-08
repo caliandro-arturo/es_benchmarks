@@ -12,18 +12,18 @@ typedef struct
     Point parent;
 } Node;
 
-int map[HEIGHT][WIDTH];
+int map[PATHFIND_HEIGHT][PATHFIND_WIDTH];
 Point start;
 Point goal;
 
 // Liste chiuse e aperte
-int closedList[HEIGHT][WIDTH] = {0}; // Lista chiusa
-Node openList[WIDTH * HEIGHT];       // Lista aperta
-Node closedNodes[WIDTH * HEIGHT];    // Lista dei nodi chiusi
+int closedList[PATHFIND_HEIGHT][PATHFIND_WIDTH] = {0}; // Lista chiusa
+Node openList[PATHFIND_WIDTH * PATHFIND_HEIGHT];       // Lista aperta
+Node closedNodes[PATHFIND_WIDTH * PATHFIND_HEIGHT];    // Lista dei nodi chiusi
 int openListSize = 0;
 int closedListSize = 0;
 
-Point path[WIDTH * HEIGHT]; // Array statico per il percorso
+Point path[PATHFIND_WIDTH * PATHFIND_HEIGHT]; // Array statico per il percorso
 int pathLength = 0;         // Lunghezza del percorso
 
 // Funzione per calcolare l'Heuristica (distanza euclidea)
@@ -68,7 +68,7 @@ Node getLowestFCostNode()
 // Funzione per verificare se un punto è all'interno della mappa
 int isValid(Point p)
 {
-    return p.x >= 0 && p.x < WIDTH && p.y >= 0 && p.y < HEIGHT;
+    return p.x >= 0 && p.x < PATHFIND_WIDTH && p.y >= 0 && p.y < PATHFIND_HEIGHT;
 }
 
 // Funzione per verificare se un punto è un ostacolo
@@ -157,9 +157,9 @@ void pathfind(unsigned int input[PATHFIND_INPUT_SIZE])
     goal.y = input[3];
 
     int counter = 4;
-    for (int i = 0; i < HEIGHT; ++i)
+    for (int i = 0; i < PATHFIND_HEIGHT; ++i)
     {
-        for (int j = 0; j < WIDTH; ++j)
+        for (int j = 0; j < PATHFIND_WIDTH; ++j)
         {
             map[i][j] = input[counter];
             ++counter;

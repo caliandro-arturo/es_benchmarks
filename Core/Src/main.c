@@ -50,7 +50,6 @@
 
 /* USER CODE BEGIN PV */
 char data[32];
-double total_ms;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,12 +57,9 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
 
-double bench(void (*benchmark)(double *), uint32_t input_len,
-             uint32_t iter, uint32_t rescale);
-double bench_int(void (*benchmark)(unsigned int *), uint32_t input_len,
-                 uint32_t iter, uint32_t rescale_mod, int32_t rescale_offset);
-double bench_int_pathfind(void (*benchmark)(unsigned int *), uint32_t input_len,
-                          uint32_t iter, uint32_t rescale_mod);
+void bench(void (*benchmark)(double *), uint32_t input_len, uint32_t iter, uint32_t rescale);
+void bench_int(void (*benchmark)(unsigned int *), uint32_t input_len, uint32_t iter, uint32_t rescale_mod, int32_t rescale_offset);
+void bench_int_pathfind(void (*benchmark)(unsigned int *), uint32_t input_len, uint32_t iter, uint32_t rescale_mod);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -108,24 +104,27 @@ int main(void)
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
   // Set random seed
   random_set_seed(42);
-  uint32_t iters = 100;
+  uint32_t iters = 1000;
 
   // Visualizer
-  total_ms = bench(visualizer, VIS_INPUT_SIZE, iters, 100);
-  printf("Visualizer, %lu iterations: %.4f ms\r\n", iters, total_ms);
+  printf("Start bench Visualizer\r\n");
+  bench(visualizer, VIS_INPUT_SIZE, iters, VIS_INPUT_SCALE);
+  printf("Done bench Visualizer\r\n");
+
   // Pwm-fan-speed
-  total_ms = bench(pwm_fan_speed, PWM_INPUT_SIZE, iters, 5);
-  printf("Pwm fan speed controller, %lu iterations: %.4f ms\r\n", iters,
-         total_ms);
+  printf("Start bench Pwm fan speed controller\r\n");
+  bench(pwm_fan_speed, PWM_INPUT_SIZE, iters, PWM_INPUT_SCALE);
+  printf("Done bench Pwm fan speed controller\r\n");
+
   // Huffman compression
-  total_ms = bench_int(huffman_compression, HUFFMAN_INPUT_SIZE, iters, 95,
-                       32);
-  printf("Huffman compression, %lu iterations: %.4f ms\r\n", iters,
-         total_ms);
+  printf("Start bench Huffman compression\r\n");
+  bench_int(huffman_compression, HUFFMAN_INPUT_SIZE, iters, 95,  32);
+  printf("Done bench Huffman compression\r\n");
+
   // Pathfind
-  total_ms = bench_int_pathfind(pathfind, PATHFIND_INPUT_SIZE, iters, HEIGHT);
-  printf("Pathfind, %lu iterations: %.4f ms\r\n", iters,
-         total_ms);
+  printf("Start bench Pathfinder\r\n");
+  bench_int_pathfind(pathfind, PATHFIND_INPUT_SIZE, iters, PATHFIND_HEIGHT);
+  printf("Done bench Pathfinder\r\n");
 
   /* USER CODE END 2 */
 
@@ -192,13 +191,12 @@ void SystemClock_Config(void)
  * @param input_len: the length of the input for the benchmark
  * @param iter: the number of iterations: each iteration will have different input
  * @param rescale: a parameter to rescale the input (which is in the range U[0,1)
- * @return double: the duration of the benchmark, in ms
  */
-double bench(void (*benchmark)(double *), uint32_t input_len,
+void bench(void (*benchmark)(double *), uint32_t input_len,
              uint32_t iter, uint32_t rescale)
 {
   double input[input_len];
-  double total_cycles = 0;
+  long unsigned int single_iter_lapse;
   for (int i = 0; i < iter; ++i)
   {
     // Randomize array
@@ -212,11 +210,9 @@ double bench(void (*benchmark)(double *), uint32_t input_len,
     DWT->CYCCNT = 0;
     // Run the bench
     benchmark(input);
-    // Get the total number of cycles
-    total_cycles += (DWT->CYCCNT);
+    single_iter_lapse = DWT->CYCCNT;
+    printf("%lu\r\n", single_iter_lapse);
   }
-  // Convert from cycles to milliseconds
-  return (total_cycles * 1000.0 / HAL_RCC_GetSysClockFreq());
 }
 
 /**
@@ -230,13 +226,12 @@ double bench(void (*benchmark)(double *), uint32_t input_len,
  * @param iter: the number of iterations: each iteration will have different input
  * @param rescale_mod: the range of integer values (from 0 to rescale_mod-1)
  * @param rescale_offset: the range offset (to sum to each input value)
- * @return double: the duration of the benchmark, in ms
  */
-double bench_int(void (*benchmark)(unsigned int *), uint32_t input_len,
+void bench_int(void (*benchmark)(unsigned int *), uint32_t input_len,
                  uint32_t iter, uint32_t rescale_mod, int32_t rescale_offset)
 {
   uint32_t input[input_len];
-  double total_cycles = 0;
+  long unsigned int single_iter_lapse;
   for (int i = 0; i < iter; ++i)
   {
     // Randomize array
@@ -250,11 +245,9 @@ double bench_int(void (*benchmark)(unsigned int *), uint32_t input_len,
     DWT->CYCCNT = 0;
     // Run the bench
     benchmark((unsigned int *)input);
-    // Get the total number of cycles
-    total_cycles += (DWT->CYCCNT);
+    single_iter_lapse = DWT->CYCCNT;
+    printf("%lu\r\n", single_iter_lapse);
   }
-  // Convert from cycles to milliseconds
-  return (total_cycles * 1000.0 / HAL_RCC_GetSysClockFreq());
 }
 
 /**
@@ -268,13 +261,11 @@ double bench_int(void (*benchmark)(unsigned int *), uint32_t input_len,
  * @param input_len: the length of the input for the benchmark
  * @param iter: the number of iterations: each iteration will have different input
  * @param rescale_mod: the range of integer values (from 0 to rescale_mod-1)
- * @return double: the duration of the benchmark, in ms
  */
-double bench_int_pathfind(void (*benchmark)(unsigned int *), uint32_t input_len,
+void bench_int_pathfind(void (*benchmark)(unsigned int *), uint32_t input_len,
                           uint32_t iter, uint32_t rescale_mod)
 {
-  uint32_t input[input_len];
-  double total_cycles = 0;
+  uint32_t input[input_len], single_iter_lapse;
   for (int i = 0; i < iter; ++i)
   {
     // Randomize array
@@ -284,6 +275,7 @@ double bench_int_pathfind(void (*benchmark)(unsigned int *), uint32_t input_len,
     {
       input[j] = input[j] % rescale_mod;
     }
+    // Generate the map
     rescale_mod = 2;
     for (int j = 4; j < input_len; ++j)
     {
@@ -293,11 +285,9 @@ double bench_int_pathfind(void (*benchmark)(unsigned int *), uint32_t input_len,
     DWT->CYCCNT = 0;
     // Run the bench
     benchmark((unsigned int *)input);
-    // Get the total number of cycles
-    total_cycles += (DWT->CYCCNT);
+    single_iter_lapse = DWT->CYCCNT;
+    printf("%lu\r\n", single_iter_lapse);
   }
-  // Convert from cycles to milliseconds
-  return (total_cycles * 1000.0 / HAL_RCC_GetSysClockFreq());
 }
 
 PUTCHAR_PROTOTYPE
