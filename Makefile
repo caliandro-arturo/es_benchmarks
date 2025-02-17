@@ -1,17 +1,22 @@
 CC = gcc
-CFLAGS = -std=c11
+CFLAGS = -std=c11 -lm -Wall -Wextra -O2
 
 SRCDIR := Test
-SRCS = $(wildcard $(SRCDIR)/*.c)
-OBJS = $(patsubst $(SRCDIR)/%.c, $(BUILDDIR)/%.o, $(SRCS))
-BUILDDIR = Test-build
+BUILDDIR := Test-build
+SRCS := $(wildcard $(SRCDIR)/*.c)
+EXECS := $(patsubst $(SRCDIR)/%.c, $(BUILDDIR)/%, $(SRCS))
 
-$(OBJS:.o=): $(OBJS)
-	$(CC) -o $@ $^
+.PHONY: all
+all: $(BUILDDIR) $(EXECS)
 
-$(OBJS): $(SRCS)
-	test -d $(BUILDDIR) || mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) -o $@ -c $<
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
+
+$(BUILDDIR)/%: $(SRCDIR)/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $<
+
+.PHONY: $(notdir $(EXECS))
+$(notdir $(EXECS)): % : $(BUILDDIR)/%
 
 clean:
 	rm -rf $(BUILDDIR)
