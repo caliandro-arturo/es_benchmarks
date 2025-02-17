@@ -396,9 +396,8 @@ char decode(unsigned int size, Node *tree, unsigned int input,
         ++(*len);
         input <<= 1;
     } while (node.left != -1 && node.right != -1);
-    for (unsigned int i = 0; i < SYMBOL_BYTE_LEN; ++i) {
-        if (node.symbol[i] != 0) {
-            index = i;
+    for (index = 0; index < SYMBOL_BYTE_LEN; ++index) {
+        if (node.symbol[index] != 0) {
             break;
         }
     }

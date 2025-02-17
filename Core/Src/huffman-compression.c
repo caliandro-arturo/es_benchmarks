@@ -44,9 +44,8 @@ typedef struct {
     int inserted_at;
 } Node;
 
-unsigned int compute_input_statistics(
-    unsigned int input[HUFFMAN_INPUT_SIZE],
-    unsigned int freq[CHAR_DOMAIN_LEN]);
+unsigned int compute_input_statistics(unsigned int input[HUFFMAN_INPUT_SIZE],
+                                      unsigned int freq[CHAR_DOMAIN_LEN]);
 
 // Heap
 
@@ -67,8 +66,8 @@ void init_huffman_tree(Node *heap, unsigned int *heap_size, Node *tree,
 Node merge_nodes(Node *tree, unsigned int node_a, unsigned int node_b);
 // Insert a node in the tree, at the end of the tree
 void insert_in_tree(unsigned int *size, Node *tree, Node *node);
-unsigned int encode_input(unsigned int input[HUFFMAN_INPUT_SIZE],
-                 Node *tree, unsigned int tree_size, unsigned int *code);
+unsigned int encode_input(unsigned int input[HUFFMAN_INPUT_SIZE], Node *tree,
+                          unsigned int tree_size, unsigned int *code);
 void decode_code(unsigned int *code, unsigned int code_len, Node *tree,
                  unsigned int tree_size, char output[HUFFMAN_INPUT_SIZE + 1]);
 
@@ -86,9 +85,10 @@ void huffman_compression(unsigned int input[HUFFMAN_INPUT_SIZE]) {
     Node tree[2 * total - 1];
     init_huffman_tree(priority_queue, &heap_size, tree, &tree_size);
     // Encode the input
-    unsigned int huffman_code_space = ceilf(
-        (float)HUFFMAN_INPUT_SIZE / sizeof(int)); // The size of the code is not bigger
-                                          // than the size of the input.
+    unsigned int huffman_code_space =
+        ceilf((float)HUFFMAN_INPUT_SIZE /
+              sizeof(int)); // The size of the code is not bigger
+                            // than the size of the input.
     unsigned int code[huffman_code_space];
     unsigned int code_len = encode_input(input, tree, tree_size, code);
 
@@ -106,7 +106,8 @@ void huffman_compression(unsigned int input[HUFFMAN_INPUT_SIZE]) {
  * @param freq: the array to use as histogram
  * @return int: the amount of unique characters
  */
-unsigned int compute_input_statistics(unsigned int input[HUFFMAN_INPUT_SIZE], unsigned int freq[CHAR_DOMAIN_LEN]) {
+unsigned int compute_input_statistics(unsigned int input[HUFFMAN_INPUT_SIZE],
+                                      unsigned int freq[CHAR_DOMAIN_LEN]) {
     int total = 0;
     int next_char;
     for (unsigned int i = 0; i < HUFFMAN_INPUT_SIZE; ++i) {
@@ -304,8 +305,8 @@ unsigned int encode(unsigned int size, Node *tree, char ch, unsigned int *len) {
     return code;
 }
 
-unsigned int encode_input(unsigned int input[HUFFMAN_INPUT_SIZE], Node *tree, unsigned int tree_size,
-                          unsigned int *code) {
+unsigned int encode_input(unsigned int input[HUFFMAN_INPUT_SIZE], Node *tree,
+                          unsigned int tree_size, unsigned int *code) {
     unsigned int code_len = 0;
     unsigned int curr_cell = 0, curr_cell_bit = 0;
     // Used to store single encoded characters
@@ -354,9 +355,8 @@ char decode(unsigned int size, Node *tree, unsigned int input,
         ++(*len);
         input <<= 1;
     } while (node.left != -1 && node.right != -1);
-    for (unsigned int i = 0; i < SYMBOL_BYTE_LEN; ++i) {
-        if (node.symbol[i] != 0) {
-            index = i;
+    for (index = 0; index < SYMBOL_BYTE_LEN; ++index) {
+        if (node.symbol[index] != 0) {
             break;
         }
     }
